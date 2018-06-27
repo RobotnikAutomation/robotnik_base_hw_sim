@@ -3,7 +3,7 @@ motors:
     can_id: 1
   - joint: right_joint
     can_id: 2
-battery_voltage: 48
+battery_voltage: 53
 battery_amperes: 15
 battery_alarm_voltage: 48.5
 num_inputs_per_driver: 5

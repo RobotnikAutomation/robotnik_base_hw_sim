@@ -1,5 +1,12 @@
-joint_name: [rbkairos_a_back_left_wheel_joint, rbkairos_a_back_right_wheel_joint, rbkairos_a_front_left_wheel_joint, rbkairos_a_front_right_wheel_joint]
-joint_can_id: [1,2,3,4]
+motors:  
+  - joint: back_left_joint
+    can_id: 1
+  - joint: back_right_joint
+    can_id: 2
+  - joint: front_left_joint
+    can_id: 3
+  - joint: front_right_joint
+    can_id: 4
 battery_voltage: 51
 battery_amperes: 15
 battery_alarm_voltage: 48.5

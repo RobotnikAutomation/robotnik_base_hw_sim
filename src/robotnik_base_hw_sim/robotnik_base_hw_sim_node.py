@@ -57,11 +57,15 @@ class RobotnikBaseHwSim:
 			self.desired_freq = DEFAULT_FREQ
 	
 	
-		self._joint_names = args['joint_name']
-		self._joint_can_ids = args['joint_can_id']
+		self._motors = args['motors']
+		
+		print self._motors
+		
+		#self._joint_names = args['joint_name']
+		#self._joint_can_ids = args['joint_can_id']
 	    
-		if len(self._joint_names) != len(self._joint_can_ids):
-			rospy.logerr('%s::init: joint names and can ids have different size'%(self.node_name))
+		if self._motors == None or len(self._motors) == 0:
+			rospy.logerr('%s::init: no motors defined'%(self.node_name))
 			exit()
 		
 		self._battery_voltage = args['battery_voltage']
@@ -97,9 +101,9 @@ class RobotnikBaseHwSim:
 		#self._io.digita
 		
 		self._motor_status = RobotnikMotorsStatus()
-		for i in range(0, len(self._joint_names)):
-			self._motor_status.name.append(self._joint_names[i])
-			self._motor_status.can_id.append(self._joint_can_ids[i])
+		for i in self._motors:
+			self._motor_status.name.append(i['joint'])
+			self._motor_status.can_id.append(i['can_id'])
 			ms = MotorStatus()
 			self._motor_status.motor_status.append(ms)
 		
@@ -439,8 +443,7 @@ def main():
 	arg_defaults = {
 	  'topic_state': 'state',
 	  'desired_freq': DEFAULT_FREQ,
-	  'joint_name': ['left_joint', 'right_joint'],
-	  'joint_can_id': [1,2],
+	  'motors': None,
 	  'battery_voltage': 24,
 	  'battery_amperes': 15,
 	  'battery_alarm_voltage': 22.5,
