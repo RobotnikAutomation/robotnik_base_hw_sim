@@ -1,0 +1,9 @@
+joint_name: [rbkairos_a_back_left_wheel_joint, rbkairos_a_back_right_wheel_joint, rbkairos_a_front_left_wheel_joint, rbkairos_a_front_right_wheel_joint]
+joint_can_id: [1,2,3,4]
+battery_voltage: 51
+battery_amperes: 15
+battery_alarm_voltage: 48.5
+num_inputs_per_driver: 5
+num_outputs_per_driver: 3
+# A/h (to simulate battery discharge)
+power_consumption: 2

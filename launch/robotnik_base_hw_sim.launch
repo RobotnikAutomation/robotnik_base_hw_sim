@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+
+	<arg name="config_yaml" default="robotnik_base_hw_sim"/>
+	
+	<node pkg="robotnik_base_hw_sim" type="robotnik_base_hw_sim_node.py" name="robotnik_base_hw" output="screen">
+	
+		<rosparam command="load" file="$(find robotnik_base_hw_sim)/config/$(arg config_yaml).yaml" />
+
+	</node>
+	
+</launch>
