@@ -3,6 +3,9 @@
 
 
 	<arg name="config_yaml" default="robotnik_base_hw_sim"/>
+	<arg name="prefix" default=""/> 
+	<arg name="left_joint" default="$(arg prefix)left_joint"/> 
+	<arg name="right_joint" default="$(arg prefix)right_joint"/>
 	
 	<node pkg="robotnik_base_hw_sim" type="robotnik_base_hw_sim_node.py" name="robotnik_base_hw" output="screen">
 	

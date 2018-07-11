@@ -61,6 +61,7 @@ class RobotnikBaseHwSim:
 		
 		print self._motors
 		
+		#exit()
 		#self._joint_names = args['joint_name']
 		#self._joint_can_ids = args['joint_can_id']
 	    
@@ -102,8 +103,9 @@ class RobotnikBaseHwSim:
 		
 		self._motor_status = RobotnikMotorsStatus()
 		for i in self._motors:
-			self._motor_status.name.append(i['joint'])
-			self._motor_status.can_id.append(i['can_id'])
+			print 'motor %s'%i	
+			self._motor_status.name.append(self._motors[i]['joint'])
+			self._motor_status.can_id.append(self._motors[i]['can_id'])
 			ms = MotorStatus()
 			self._motor_status.motor_status.append(ms)
 		
