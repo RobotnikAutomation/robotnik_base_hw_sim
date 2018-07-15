@@ -12,14 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
-# catkin_python_setup()
+catkin_python_setup()
 
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES robotnik_base_hw_sim
-#  CATKIN_DEPENDS robotnik_msgs rospy
-#  DEPENDS system_lib
-)
+catkin_package()
 
 ###########
 ## Build ##
@@ -53,9 +48,11 @@ install(TARGETS robotnik_elevator_controller
 install(FILES robotnik_elevator_controller_plugins.xml
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
+install(PROGRAMS
+   src/robotnik_base_hw_sim/robotnik_base_hw_sim_node.py
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-#############
-## Install ##
-#############
-
-
+install(DIRECTORY launch config
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
