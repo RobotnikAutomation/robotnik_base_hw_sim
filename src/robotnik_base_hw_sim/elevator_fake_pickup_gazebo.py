@@ -210,6 +210,59 @@ class ElevatorFakePickup:
 		
 		self.node_name = rospy.get_name() #.replace('/','')
 		self.desired_freq = args['desired_freq'] 
+
+		
+		# saves the state of all the gazebo models related to robots
+		self._gazebo_robots = {}
+		# saves the state of all the gazebo models related to pickable objects 
+		self._gazebo_objects = {}
+				
+		'''
+		expected format:
+		-
+		  model: rb2cart
+		  default_link: link_0
+		'''
+		self._robot_models_config = args['robots']
+		if self._robot_models_config is None or len(self._robot_models_config) == 0:
+			rospy.logerr('%s::__init__: param robots is mandatory', self.node_name)
+			exit()
+
+		for cfg in self._robot_models_config:
+			default_link = ''
+			model = ''
+			if cfg.has_key('default_link') and len(cfg['default_link']) > 0:
+				default_link = cfg['default_link']
+			else:
+				rospy.logerr('%s::__init__: param default_link has to be defined for every model: %s', self.node_name, str(cfg))
+				exit()
+			if cfg.has_key('model') and len(cfg['model']) > 0:
+				model = cfg['model']
+			else:
+				rospy.logerr('%s::__init__: param model has to be defined for every model: %s', self.node_name, str(cfg))
+				exit()
+			self._gazebo_robots[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link)}
+
+
+		self._object_models_config = args['objects']
+		if self._object_models_config is None or len(self._object_models_config) == 0:
+			rospy.logerr('%s::__init__: param objects is mandatory', self.node_name)
+			exit()
+		for cfg in self._object_models_config:
+			default_link = ''
+			model = ''
+			if cfg.has_key('default_link') and len(cfg['default_link']) > 0:
+				default_link = cfg['default_link']
+			else:
+				rospy.logerr('%s::__init__: param default_link has to be defined for every model: %s', self.node_name, str(cfg))
+				exit()
+			if cfg.has_key('model') and len(cfg['model']) > 0:
+				model = cfg['model']
+			else:
+				rospy.logerr('%s::__init__: param model has to be defined for every model: %s', self.node_name, str(cfg))
+				exit()
+			self._gazebo_objects[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link)}
+
 		# Checks value of freq
 		if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
 			rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
@@ -236,14 +289,6 @@ class ElevatorFakePickup:
 		
 		self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
 		
-		# TODO: do it from ros params
-		# saves the state of all the gazebo models related to robots
-		self._gazebo_robots = {}
-		# saves the state of all the gazebo models related to pickable objects 
-		self._gazebo_objects = {}
-		
-		self._gazebo_robots['rb2_a'] = {'model': GazeboModelState(), 'links': {}}
-		self._gazebo_objects['rb2cart'] = {'model': GazeboModelState(), 'links': {}}
 		
 		# save the current links/picking between robot & objects (GazeboPickAndPlace)
 		self._current_picks = {}
@@ -910,6 +955,8 @@ def main():
 	arg_defaults = {
 	  'topic_state': 'state',
 	  'desired_freq': DEFAULT_FREQ,
+	  'robots': None,
+	  'objects': None
 	}
 	
 	args = {}

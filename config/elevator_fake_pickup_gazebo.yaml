@@ -1,0 +1,19 @@
+# List of object enabled for picking & placing
+# model: gazebo model id
+# default_link: gazebo link used for picking for default
+
+objects:
+ -
+   model: rb2cart
+   default_link: link_0
+ -
+   model: rb2cart_0
+   default_link: link_0
+
+robots:
+- 
+   model: rb2_a
+   default_link: rb2_a_base_footprint
+- 
+   model: rb2_b
+   default_link: rb2_b_base_footprint
