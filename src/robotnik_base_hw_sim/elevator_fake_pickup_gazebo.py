@@ -814,13 +814,17 @@ class ElevatorFakePickup:
 			return False, "Model %s doesn't exist"%req.robot_model
 		
 		#
-		# Check whether is or not already picked
+		# Check whether the is or not already picked
+		# check whether the robot has already something picked
 		for pick in self._current_picks:
 			pick_robot_model = pick.split('->')[0]
 			pick_object_model = pick.split('->')[1]
+			
 			if req.object_model == pick_object_model and req.robot_model != pick_robot_model: #allows the same robot picks the same object
-				return False, "The object %s is currently picked %s"%(req.object_model,pick)
+				return False, "The object %s is currently picked (%s)"%(req.object_model,pick)
 
+			if req.robot_model == pick_robot_model and req.object_model != pick_object_model: #allows the same robot picks the same object 
+				return False, "The robot %s is currently picking another object (%s)"%(req.robot_model,pick)
 		#
 		# Get link properties of the object
 		object_link='%s::%s'%(req.object_model, req.object_link)
@@ -849,25 +853,9 @@ class ElevatorFakePickup:
 		if not self.setGazeboLinkProperties(set_link_properties_srv):
 			return False, "Error setting gazebo link properties of %s"%object_link
 		
-		
 		#
 		# get link state of the robot
 		robot_link='%s::%s'%(req.robot_model, req.robot_link)
-		'''
-		robot_link_state = self._gazebo_robots[req.robot_model]['links'][robot_link].get()
-		# adding pose transform to robot current one
-		robot_link_state.pose.position.x += req.pose.position.x
-		robot_link_state.pose.position.y += req.pose.position.y
-		robot_link_state.pose.position.z += req.pose.position.z
-		robot_link_state.pose.orientation.x += req.pose.orientation.x
-		robot_link_state.pose.orientation.y += req.pose.orientation.y
-		robot_link_state.pose.orientation.z += req.pose.orientation.z
-		robot_link_state.link_name = '%s::%s'%(req.object_model, req.object_link)
-		
-		# place the obj into the same pose/orientation of the robot link and different Z
-		if not self.setGazeboLinkState(robot_link_state):
-			return False, "Error setting gazebo link state of %s"%robot_link
-		'''
 		
 		# adding new pick
 		self._current_picks[pick_id] = GazeboPickAndPlace(robot_link=robot_link, object_link = object_link, transform_pose = req.pose)
