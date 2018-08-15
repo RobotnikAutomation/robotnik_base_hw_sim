@@ -552,16 +552,16 @@ class ElevatorFakePickup:
 			return
 			
 		picks_to_remove = []
-
+		current_picks = copy.deepcopy(self._current_picks)
 		# for every pick we have to move the object to same pose than the robot + offset
-		for pick in self._current_picks:
+		for pick in current_picks:
 			
 			# place the object
-			if self._current_picks[pick].isPlaceRequired():
-				object_link = self._current_picks[pick].getObjectLink()
-				object_model = self._current_picks[pick].getObjectModel()
-				robot_model = self._current_picks[pick].getRobotModel()
-				robot_link = self._current_picks[pick].getRobotLink()
+			if current_picks[pick].isPlaceRequired():
+				object_link = current_picks[pick].getObjectLink()
+				object_model = current_picks[pick].getObjectModel()
+				robot_model = current_picks[pick].getRobotModel()
+				robot_link = current_picks[pick].getRobotLink()
 
 				# Placing the object on the ground
 				# Get the pose of the robot link
@@ -599,14 +599,14 @@ class ElevatorFakePickup:
 					picks_to_remove.append(pick)
 
 			else:	
-				robot_model = self._current_picks[pick].getRobotModel()
-				robot_link = self._current_picks[pick].getRobotLink()
-				object_link = self._current_picks[pick].getObjectLink()
+				robot_model = current_picks[pick].getRobotModel()
+				robot_link = current_picks[pick].getRobotLink()
+				object_link = current_picks[pick].getObjectLink()
 				
 				# Get the pose of the robot link
 				robot_link_state = copy.deepcopy(self._gazebo_robots[robot_model]['links'][robot_link].get())
 				# Set the pose of the object link like the robot one
-				self._current_picks[pick].applyTransformToPose(robot_link_state.pose)
+				current_picks[pick].applyTransformToPose(robot_link_state.pose)
 				# change the link name
 				robot_link_state.link_name = object_link
 				
@@ -615,7 +615,7 @@ class ElevatorFakePickup:
 		
 		# Remove picks if requested
 		for rm_pick in picks_to_remove:
-			self._current_picks.pop(pick, None)
+			self._current_picks.pop(rm_pick, None)
 		
 		return
 		
