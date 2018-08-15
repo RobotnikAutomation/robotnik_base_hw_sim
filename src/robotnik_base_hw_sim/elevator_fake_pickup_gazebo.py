@@ -779,6 +779,7 @@ class ElevatorFakePickup:
 					self._gazebo_objects[model_id]['links'][link_state.link_name] = GazeboLinkState()
 					self._gazebo_objects[model_id]['links'][link_state.link_name].update(link_state, rospy.Time.now())
 
+
 	def pickServiceCb(self, req):
 		'''
 			ROS service server
@@ -813,8 +814,13 @@ class ElevatorFakePickup:
 			return False, "Model %s doesn't exist"%req.robot_model
 		
 		#
-		# Check is not already pick
-		
+		# Check whether is or not already picked
+		for pick in self._current_picks:
+			pick_robot_model = pick.split('->')[0]
+			pick_object_model = pick.split('->')[1]
+			if req.object_model == pick_object_model and req.robot_model != pick_robot_model: #allows the same robot picks the same object
+				return False, "The object %s is currently picked %s"%(req.object_model,pick)
+
 		#
 		# Get link properties of the object
 		object_link='%s::%s'%(req.object_model, req.object_link)
@@ -901,7 +907,9 @@ class ElevatorFakePickup:
 		except rospy.ServiceException, e:
 			rospy.logerr('%s::getGazeboLinkProperties: %s', self.node_name, e)
 			return False, None
-		
+		except rospy.ROSInterruptException, e:
+			rospy.logerr('%s::getGazeboLinkProperties: %s', self.node_name, e)
+			return False, None
 		
 		return True, ret
 	
@@ -918,7 +926,10 @@ class ElevatorFakePickup:
 		except rospy.ServiceException, e:
 			rospy.logerr('%s::setGazeboLinkProperties: %s', e)
 			return False
-		
+		except rospy.ROSInterruptException, e:
+			rospy.logerr('%s::setGazeboLinkProperties: %s', self.node_name, e)
+			return False, None
+
 		if not ret.success:
 			rospy.logerr('%s::setGazeboLinkProperties: error setting properties of %s: %s', self.node_name, link_properties.link_name, ret.status_message)
 			return False
@@ -937,7 +948,10 @@ class ElevatorFakePickup:
 		except rospy.ServiceException, e:
 			rospy.logerr('%s::setGazeboLinkState: %s', self.node_name, e)
 			return False
-		
+		except rospy.ROSInterruptException, e:
+			rospy.logerr('%s::setGazeboLinkState: %s', self.node_name, e)
+			return False, None
+
 		if not ret.success:
 			rospy.logerr('%s::setGazeboLinkState: error setting state of %s', link_state.link_name, ret.status_message)
 			return False
