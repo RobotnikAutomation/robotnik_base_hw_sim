@@ -6,13 +6,35 @@ project(robotnik_base_hw_sim)
 
 
 find_package(catkin REQUIRED COMPONENTS
+  std_msgs
   controller_interface
   robotnik_msgs
   rospy
+  message_generation
+  geometry_msgs
 )
 
+add_message_files(
+    DIRECTORY msg
+    FILES
+    PickState.msg
+    PickStates.msg
+)
+add_service_files(
+    DIRECTORY srv
+    FILES
+    Pick.srv
+    Place.srv
+)
 
 catkin_python_setup()
+
+generate_messages(
+DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+   geometry_msgs
+)
+
 
 catkin_package()
 
