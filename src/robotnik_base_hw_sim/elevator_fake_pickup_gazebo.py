@@ -214,8 +214,6 @@ class ElevatorFakePickup:
 		if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
 			rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
 			self.desired_freq = DEFAULT_FREQ
-	
-	
 		self.real_freq = 0.0
 		
 		# Saves the state of the component
@@ -242,17 +240,10 @@ class ElevatorFakePickup:
 		# saves the state of all the gazebo models related to robots
 		self._gazebo_robots = {}
 		# saves the state of all the gazebo models related to pickable objects 
-		self._gazebo_pickings = {}
+		self._gazebo_objects = {}
 		
 		self._gazebo_robots['rb2_a'] = {'model': GazeboModelState(), 'links': {}}
-		self._gazebo_pickings['rb2cart'] = {'model': GazeboModelState(), 'links': {}}
-		
-		self._gazebo_robots['rb2_a']['links']['rb2_a::rb2_a_base_footprint'] = GazeboLinkState()
-		self._gazebo_robots['rb2_a']['links']['rb2_a::rb2_a_elevator_platform_link'] = GazeboLinkState()
-		self._gazebo_robots['rb2_a']['links']['rb2_a::rb2_a_left_wheel_link'] = GazeboLinkState()
-		self._gazebo_robots['rb2_a']['links']['rb2_a::rb2_a_right_wheel_link'] = GazeboLinkState()
-		
-		self._gazebo_pickings['rb2cart']['links']['rb2cart::link_0'] = GazeboLinkState()
+		self._gazebo_objects['rb2cart'] = {'model': GazeboModelState(), 'links': {}}
 		
 		# save the current links/picking between robot & objects (GazeboPickAndPlace)
 		self._current_picks = {}
@@ -279,9 +270,9 @@ class ElevatorFakePickup:
 		self._state_publisher = rospy.Publisher('~state', State, queue_size=10)
 		self._pick_state_publisher = rospy.Publisher('~pick_states', PickStates, queue_size=10)
 		self._gazebo_robot_models_publisher = rospy.Publisher('~gazebo_robot_models', ModelStates, queue_size=10)
-		self._gazebo_picking_models_publisher = rospy.Publisher('~gazebo_picking_models', ModelStates, queue_size=10)
+		self._gazebo_object_models_publisher = rospy.Publisher('~gazebo_objects_models', ModelStates, queue_size=10)
 		self._gazebo_robot_links_publisher = rospy.Publisher('~gazebo_robot_links', LinkStates, queue_size=10)
-		self._gazebo_picking_links_publisher = rospy.Publisher('~gazebo_picking_links', LinkStates, queue_size=10)
+		self._gazebo_object_links_publisher = rospy.Publisher('~gazebo_objects_links', LinkStates, queue_size=10)
 		# Subscribers
 		# topic_name, msg type, callback, queue_size
 		self.topic_sub = rospy.Subscriber('/gazebo/model_states', ModelStates, self.modelStatesCb, queue_size = 10)
@@ -439,15 +430,15 @@ class ElevatorFakePickup:
 		
 		picking_models_msg = ModelStates()
 		
-		for picking_id in self._gazebo_pickings:
-			if self._gazebo_pickings[picking_id]['model'].is_received():
-				state = self._gazebo_pickings[picking_id]['model'].get()
+		for picking_id in self._gazebo_objects:
+			if self._gazebo_objects[picking_id]['model'].is_received():
+				state = self._gazebo_objects[picking_id]['model'].get()
 				
 				picking_models_msg.name.append(state.model_name)
 				picking_models_msg.pose.append(state.pose)
 				picking_models_msg.twist.append(state.twist)
 				
-		self._gazebo_picking_models_publisher.publish(picking_models_msg)		
+		self._gazebo_object_models_publisher.publish(picking_models_msg)		
 		
 		
 		robot_links_msg = LinkStates()
@@ -465,18 +456,18 @@ class ElevatorFakePickup:
 		
 		picking_links_msg = LinkStates()
 		
-		for picking_id in self._gazebo_pickings:
-			for link_id in self._gazebo_pickings[picking_id]['links']:
-				if self._gazebo_pickings[picking_id]['links'][link_id].is_received():
-					state = self._gazebo_pickings[picking_id]['links'][link_id].get()
+		for picking_id in self._gazebo_objects:
+			for link_id in self._gazebo_objects[picking_id]['links']:
+				if self._gazebo_objects[picking_id]['links'][link_id].is_received():
+					state = self._gazebo_objects[picking_id]['links'][link_id].get()
 					
 					picking_links_msg.name.append(state.link_name)
 					picking_links_msg.pose.append(state.pose)
 					picking_links_msg.twist.append(state.twist)
 				
-		self._gazebo_picking_links_publisher.publish(picking_links_msg)		
+		self._gazebo_object_links_publisher.publish(picking_links_msg)		
 		#print self._gazebo_robots
-		#print self._gazebo_pickings
+		#print self._gazebo_objects
 		
 					
 		return 0
@@ -540,7 +531,7 @@ class ElevatorFakePickup:
 
 				#
 				# Get link properties of the object
-				properties = self._gazebo_pickings[object_model]['links'][object_link].get_properties()
+				properties = self._gazebo_objects[object_model]['links'][object_link].get_properties()
 
 				# set link properties of the object
 				# 	bring gravity bck(TODO: from all the links of the object)
@@ -697,12 +688,12 @@ class ElevatorFakePickup:
 				model_state.twist = msg.twist[i]
 				self._gazebo_robots[msg.name[i]]['model'].update(model_state, rospy.Time.now())
 				
-			elif msg.name[i] in self._gazebo_pickings:
+			elif msg.name[i] in self._gazebo_objects:
 				model_state = ModelState()
 				model_state.model_name = msg.name[i]
 				model_state.pose = msg.pose[i]
 				model_state.twist = msg.twist[i]
-				self._gazebo_pickings[msg.name[i]]['model'].update(model_state, rospy.Time.now())
+				self._gazebo_objects[msg.name[i]]['model'].update(model_state, rospy.Time.now())
 				
 				
 	def linkStatesCb(self, msg):
@@ -711,24 +702,38 @@ class ElevatorFakePickup:
 			@param msg: received message
 			@type msg: gazebo_msgs/LinkStates
 		'''
+
 		for i in range(len(msg.name)):
 			model_id = msg.name[i].split('::')[0]
 			
+			# Adds dynamically all the links for all the models
 			if model_id in self._gazebo_robots:
 				link_state = LinkState()
 				link_state.link_name = msg.name[i]
 				link_state.pose = msg.pose[i]
 				link_state.twist = msg.twist[i]
-				self._gazebo_robots[model_id]['links'][msg.name[i]].update(link_state, rospy.Time.now())
+
 				
-			elif model_id in self._gazebo_pickings:
+				# already exist?
+				if link_state.link_name in self._gazebo_robots[model_id]['links']:
+					self._gazebo_robots[model_id]['links'][link_state.link_name].update(link_state, rospy.Time.now())
+				else:
+					rospy.loginfo('%s::linkStatesCb: adding new link %s', self.node_name, link_state.link_name)
+					self._gazebo_robots[model_id]['links'][link_state.link_name] = GazeboLinkState()
+					self._gazebo_robots[model_id]['links'][link_state.link_name].update(link_state, rospy.Time.now())
+			elif model_id in self._gazebo_objects:
 				link_state = LinkState()
 				link_state.link_name = msg.name[i]
 				link_state.pose = msg.pose[i]
 				link_state.twist = msg.twist[i]
-				self._gazebo_pickings[model_id]['links'][msg.name[i]].update(link_state, rospy.Time.now())
-				
-	
+				# already exist?
+				if link_state.link_name in self._gazebo_objects[model_id]['links']:
+					self._gazebo_objects[model_id]['links'][link_state.link_name].update(link_state, rospy.Time.now())
+				else:
+					rospy.loginfo('%s::linkStatesCb: adding new link %s', self.node_name, link_state.link_name)
+					self._gazebo_objects[model_id]['links'][link_state.link_name] = GazeboLinkState()
+					self._gazebo_objects[model_id]['links'][link_state.link_name].update(link_state, rospy.Time.now())
+
 	def pickServiceCb(self, req):
 		'''
 			ROS service server
@@ -738,10 +743,10 @@ class ElevatorFakePickup:
 		pick_id = '%s->%s'%(req.robot_model, req.object_model)
 		#
 		# check that model and links exists
-		if req.object_model in self._gazebo_pickings:
+		if req.object_model in self._gazebo_objects:
 			link='%s::%s'%(req.object_model, req.object_link)
-			if link in self._gazebo_pickings[req.object_model]['links']:
-				if not self._gazebo_pickings[req.object_model]['links'][link].is_received():
+			if link in self._gazebo_objects[req.object_model]['links']:
+				if not self._gazebo_objects[req.object_model]['links'][link].is_received():
 					return False, "Link %s is not being received anymore"%req.object_link
 				
 			else:
@@ -774,7 +779,7 @@ class ElevatorFakePickup:
 			return False, "Error getting gazebo link properties of %s"%object_link
 		
 		# save the properties of the object link
-		self._gazebo_pickings[req.object_model]['links'][object_link].update_properties(properties)
+		self._gazebo_objects[req.object_model]['links'][object_link].update_properties(properties)
 		
 		# set link properties of the object
 		# 	remove gravity (TODO: from all the links of the object)

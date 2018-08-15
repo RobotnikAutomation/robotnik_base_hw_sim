@@ -101,7 +101,7 @@ msg: "OK"
 ```
 
  * place [robotnik_base_hw_sim/Place]
-   * Place a picked object
+   * Place a picked object    
    * Example:
 
 ```
