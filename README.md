@@ -52,6 +52,39 @@ The way it works:
 2. Sets the position of the object in the same one than the robot. This is done continuosly.
 3. Place: sets the gravity of the picked object and stops setting the position of the robot
 
+### bringup
+
+```
+roslaunch robotnik_base_hw_sim elevator_fake_pickup_gazebo.launch
+```
+
+*Arguments:*
+ * config_yaml: path to the yaml containing the configuration
+
+
+*YAML Example:*
+   ```
+   objects:
+ -
+   model: rb2cart
+   default_link: link_0
+ -
+   model: rb2cart_0
+   default_link: link_0
+
+robots:
+- 
+   model: rb2_a
+   default_link: rb2_a_base_footprint
+- 
+   model: rb2_b
+   default_link: rb2_b_base_footprint
+
+config:
+  # min distance for the simple pick
+  min_picking_distance: 0.1
+   ```
+
 ### params
 
 ### topics
@@ -124,6 +157,15 @@ pose:
     y: 0.0
     z: 0.0
     w: 0.0" 
+success: True
+msg: "OK"
+```
+* simple_place[robotnik_base_hw_sim/SimplePlace]
+   * Places the object(s) the robot has picked
+   * Example:
+
+```
+rosservice call /elevator_fake_pickup_gazebo/simple_place "robot_model: 'rb2_a'" 
 success: True
 msg: "OK"
 ```

@@ -42,7 +42,7 @@ from robotnik_msgs.msg import State
 from gazebo_msgs.srv import GetModelState, GetLinkProperties, SetLinkProperties, GetLinkPropertiesResponse, SetModelState, SetLinkPropertiesRequest, SetLinkState
 from gazebo_msgs.msg import ModelState, ModelStates
 from gazebo_msgs.msg import LinkState, LinkStates
-from robotnik_base_hw_sim.srv import Pick, Place, SimplePick
+from robotnik_base_hw_sim.srv import Pick, Place, SimplePick, SimplePlace
 from robotnik_base_hw_sim.msg import PickState, PickStates
 from geometry_msgs.msg import Pose
 
@@ -340,6 +340,7 @@ class ElevatorFakePickup:
 		self.pick_service_server = rospy.Service('~pick', Pick, self.pickServiceCb)
 		self.simple_pick_service_server = rospy.Service('~simple_pick', SimplePick, self.simplePickServiceCb)
 		self.place_service_server = rospy.Service('~place', Place, self.placeServiceCb)
+		self.place_service_server = rospy.Service('~simple_place', SimplePlace, self.simplePlaceServiceCb)
 
 		# Service Clients
 		self.get_link_properties_service_client = rospy.ServiceProxy('/gazebo/get_link_properties', GetLinkProperties)
@@ -993,6 +994,31 @@ class ElevatorFakePickup:
 			self._current_picks[pick_id].place()
 
 		rospy.loginfo('%s:placeServiceCb: placing %s from %s', self.node_name, req.object_model, req.robot_model )	
+
+		return True, "OK" 
+		
+	
+	def simplePlaceServiceCb(self, req):
+		'''
+			ROS service server
+			@param req: Required action
+			@type req: robotnik_base_hw_sim/SimplePlace
+		'''
+		current_picks = copy.deepcopy(self._current_picks)
+		pick_id = ''
+
+		for p in current_picks:
+			pick_robot_model = p.split('->')[0]
+			if req.robot_model == pick_robot_model:
+				pick_id = '%s->%s'%(req.robot_model, current_picks[p].getObjectModel())
+				break
+
+		if pick_id == '' or not pick_id in self._current_picks:
+			return False, 'The pick %s does not exist'%pick_id
+		else:
+			self._current_picks[pick_id].place()
+
+		rospy.loginfo('%s:simplePlaceServiceCb: placing %s', self.node_name, pick_id )	
 
 		return True, "OK" 
 		
