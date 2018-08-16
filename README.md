@@ -94,7 +94,7 @@ object_link: 'link_0'
 robot_model: 'rb2_a'
 robot_link: 'rb2_a_base_footprint'
 pose:
-  position: {x: 0.0, y: 0.0, z: 2}
+  position: {x: 0.0, y: 0.0, z: 0.2}
   orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}" 
 success: True
 msg: "OK"
@@ -107,4 +107,23 @@ msg: "OK"
 ```
 rosservice call /elevator_fake_pickup_gazebo/place "object_model: 'rb2cart'
 robot_model: 'rb2_a'" 
+```
+* simple_pick [robotnik_base_hw_sim/SimplePick]
+   * Pick the closest object to a robot (within a min distance)
+   * Example:
+
+```
+rosservice call /elevator_fake_pickup_gazebo/simple_pick "robot_model: 'rb2_a'                     
+pose:
+  position:
+    x: 0.0
+    y: 0.0
+    z: 0.1
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 0.0" 
+success: True
+msg: "OK"
 ```

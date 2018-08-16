@@ -17,3 +17,7 @@ robots:
 - 
    model: rb2_b
    default_link: rb2_b_base_footprint
+
+config:
+  # min distance for the simple pick
+  min_picking_distance: 0.1

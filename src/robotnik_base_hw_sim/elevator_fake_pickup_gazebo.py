@@ -35,19 +35,20 @@
 import rospy 
 
 import time, threading
-import copy
+import copy, math
 
 from robotnik_msgs.msg import State
 
 from gazebo_msgs.srv import GetModelState, GetLinkProperties, SetLinkProperties, GetLinkPropertiesResponse, SetModelState, SetLinkPropertiesRequest, SetLinkState
 from gazebo_msgs.msg import ModelState, ModelStates
 from gazebo_msgs.msg import LinkState, LinkStates
-from robotnik_base_hw_sim.srv import Pick, Place
+from robotnik_base_hw_sim.srv import Pick, Place, SimplePick
 from robotnik_base_hw_sim.msg import PickState, PickStates
 from geometry_msgs.msg import Pose
 
 DEFAULT_FREQ = 100.0
 MAX_FREQ = 500.0
+DEFAULT_MIN_PICKING_DISTANCE = 0.1 
 
 
 class GazeboLinkState:
@@ -263,6 +264,19 @@ class ElevatorFakePickup:
 				exit()
 			self._gazebo_objects[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link)}
 
+		self._global_config = args['config']
+		
+		if self._global_config is None or len(self._object_models_config) == 0:
+			rospy.logwarn('%s::__init__: no config defined. Setting default params', self.node_name)
+			self._global_config = {}
+			self._global_config['min_picking_distance'] = DEFAULT_MIN_PICKING_DISTANCE
+			rospy.logwarn('%s::__init__: Setting min_picking_distance to default value: %.3lf', self.node_name, self._global_config['min_picking_distance'])
+		else:
+			if not self._global_config.has_key('min_picking_distance'):
+				self._global_config['min_picking_distance'] = DEFAULT_MIN_PICKING_DISTANCE
+				rospy.logwarn('%s::__init__: Setting min_picking_distance to default value: %.3lf', self.node_name, self._global_config['min_picking_distance'])
+		
+
 		# Checks value of freq
 		if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
 			rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
@@ -324,6 +338,7 @@ class ElevatorFakePickup:
 		self.topic_sub = rospy.Subscriber('/gazebo/link_states', LinkStates, self.linkStatesCb, queue_size = 10)
 		# Service Servers
 		self.pick_service_server = rospy.Service('~pick', Pick, self.pickServiceCb)
+		self.simple_pick_service_server = rospy.Service('~simple_pick', SimplePick, self.simplePickServiceCb)
 		self.place_service_server = rospy.Service('~place', Place, self.placeServiceCb)
 
 		# Service Clients
@@ -865,6 +880,104 @@ class ElevatorFakePickup:
 		return True, "OK" 
 
 
+	def simplePickServiceCb(self, req):
+		'''
+			ROS service server
+			@param req: Required action
+			@type req: robotnik_base_hw_sim/SimplePick
+		'''
+		
+		#
+
+		# check the robot and default link
+		if req.robot_model in self._gazebo_robots:
+			link=  self._gazebo_robots[req.robot_model]['default_link']
+			if link in self._gazebo_robots[req.robot_model]['links']:
+				if not self._gazebo_robots[req.robot_model]['links'][link].is_received():
+					return False, "Link %s is not being received anymore"%link
+				
+			else:
+				return False, "Link %s doesn't exist"%link
+			
+		else:
+			return False, "Model %s doesn't exist"%req.robot_model
+		
+		#
+		# check whether the robot has already something picked
+		for pick in self._current_picks:
+			pick_robot_model = pick.split('->')[0]
+			pick_object_model = pick.split('->')[1]
+			
+			if req.robot_model == pick_robot_model:
+				return False, "The robot %s is currently picking another object (%s)"%(req.robot_model,pick)
+		
+		robot_link_state = GazeboLinkState()
+		robot_default_link = self._gazebo_robots[req.robot_model]['default_link']
+
+		# get robot current link state
+		if self._gazebo_robots[req.robot_model]['links'].has_key(robot_default_link):
+			robot_link_state = self._gazebo_robots[req.robot_model]['links'][robot_default_link].get()
+		else:
+			return False, "The robot link %s is not being received"%(robot_default_link)
+
+		object_found = False
+		gazebo_object_default_link = ''
+		object_link_state = None
+		# looks for closest link to the robot one
+		for gazebo_object in self._gazebo_objects:
+			gazebo_object_default_link = self._gazebo_objects[gazebo_object]['default_link']
+			if self._gazebo_objects[gazebo_object]['links'].has_key(gazebo_object_default_link):
+				object_link_state = self._gazebo_objects[gazebo_object]['links'][gazebo_object_default_link].get()
+				dist = self._distance(object_link_state.pose, robot_link_state.pose)
+				#rospy.loginfo('%s::simplePickServiceCb: %s - default link = %s. Distance to %s = %.3lf', self.node_name, gazebo_object, gazebo_object_default_link, robot_default_link, dist)
+				if dist <= self._global_config['min_picking_distance']:
+					rospy.logwarn('%s::simplePickServiceCb: robot %s is going to pick %s', self.node_name, robot_default_link, gazebo_object_default_link)
+					object_found = True
+					break
+		
+		if not object_found:
+			return False, "The robot %s couldn't pickup any object"%(robot_default_link)
+
+		#
+		# Get link properties of the object
+		object_link = gazebo_object_default_link
+		object_model = object_link.split('::')[0]
+		robot_link = robot_default_link
+		ret, properties = self.getGazeboLinkProperties(object_link)
+		
+		if not ret:
+			return False, "Error getting gazebo link properties of %s"%object_link
+		
+		# save the properties of the object link
+		self._gazebo_objects[object_model]['links'][object_link].update_properties(properties)
+		
+		# set link properties of the object
+		# 	remove gravity (TODO: from all the links of the object)
+		set_link_properties_srv = SetLinkPropertiesRequest()
+		set_link_properties_srv.link_name = object_link
+		set_link_properties_srv.com = properties.com
+		set_link_properties_srv.gravity_mode = False
+		set_link_properties_srv.mass = properties.mass
+		set_link_properties_srv.ixx = properties.ixx
+		set_link_properties_srv.ixy = properties.ixy
+		set_link_properties_srv.ixz = properties.ixz
+		set_link_properties_srv.iyy = properties.iyy
+		set_link_properties_srv.iyz = properties.iyz
+		set_link_properties_srv.izz = properties.izz
+		
+		if not self.setGazeboLinkProperties(set_link_properties_srv):
+			return False, "Error setting gazebo link properties of %s"%object_link
+		
+		
+		# adding new pick
+		pick_id = '%s->%s'%(req.robot_model, object_model)
+		self._current_picks[pick_id] = GazeboPickAndPlace(robot_link=robot_link, object_link = object_link, transform_pose = req.pose)
+		
+		#rospy.loginfo('%s:simplePickServiceCb: attach %s::%s into %s::%s ', self.node_name, req.object_model, req.object_link, req.robot_model, req.robot_link  )	
+	
+		return True, "OK" 
+
+
 	def placeServiceCb(self, req):
 		'''
 			ROS service server
@@ -946,6 +1059,17 @@ class ElevatorFakePickup:
 			
 		return True
 	
+
+	def _distance(self, p1, p2):
+		'''
+			Calculates the distance between 2 pose
+			@param p1 as geometry_msgs/Pose
+			@param p2 as geometry_msgs/Pose
+			@return the Euclidean distance
+		'''
+		return math.sqrt(pow(p1.position.x - p2.position.x, 2) + pow(p1.position.y - p2.position.y, 2) + pow(p1.position.z - p2.position.z, 2))
+
+
 	
 def main():
 
@@ -958,7 +1082,8 @@ def main():
 	  'topic_state': 'state',
 	  'desired_freq': DEFAULT_FREQ,
 	  'robots': None,
-	  'objects': None
+	  'objects': None,
+	  'config': None
 	}
 	
 	args = {}

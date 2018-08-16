@@ -1,0 +1,7 @@
+# Picks closes object
+string robot_model
+# pose related to the robot link
+geometry_msgs/Pose pose
+---
+bool success
+string msg

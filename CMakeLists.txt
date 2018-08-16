@@ -25,6 +25,7 @@ add_service_files(
     FILES
     Pick.srv
     Place.srv
+    SimplePick.srv
 )
 
 catkin_python_setup()
