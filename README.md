@@ -62,6 +62,8 @@ roslaunch robotnik_base_hw_sim elevator_fake_pickup_gazebo.launch
  * config_yaml: path to the yaml containing the configuration
 
 
+### params
+
 *YAML Example:*
    ```
    objects:
@@ -84,9 +86,6 @@ config:
   # min distance for the simple pick
   min_picking_distance: 0.1
    ```
-
-### params
-
 ### topics
 #### publishers
 
