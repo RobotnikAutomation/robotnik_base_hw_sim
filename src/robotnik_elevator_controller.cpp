@@ -357,9 +357,7 @@ void RobotnikElevatorController::elevatorControlLoop(const ros::Time& time)
       // Checking timeout
       if ((time - elevator_action_init_time).toSec() > elevation_action_time_)
       {
-		 if(disable_gazebo_physics_for_pickup_){
-			 pickCart();
-		 }
+		
          elevator_status_.position = robotnik_msgs::ElevatorStatus::UP;
          // Setting the fake joint of the controller
 		 elevator_current_position_ = elevator_position_up_;
@@ -381,9 +379,7 @@ void RobotnikElevatorController::elevatorControlLoop(const ros::Time& time)
       // Checking timeout
       if ((time - elevator_action_init_time).toSec() > elevation_action_time_)
       {
-	   if(disable_gazebo_physics_for_pickup_){
-			 placeCart();
-		}
+	  
        elevator_status_.position = robotnik_msgs::ElevatorStatus::DOWN;
        // Setting the fake joint of the controller
        elevator_current_position_ = elevator_position_down_;
@@ -406,6 +402,19 @@ void RobotnikElevatorController::switchToElevatorState(string new_state)
   ROS_INFO("%s::switchToElevatorState: from %s to %s", controller_name_.c_str(), elevator_status_.state.c_str(),
            new_state.c_str());
 
+
+  
+		 
+  if(elevator_status_.state == robotnik_msgs::ElevatorStatus::LOWERING and new_state == robotnik_msgs::ElevatorStatus::IDLE){
+     if(disable_gazebo_physics_for_pickup_){
+	    placeCart();
+	 }
+  }else if(elevator_status_.state == robotnik_msgs::ElevatorStatus::RAISING and new_state == robotnik_msgs::ElevatorStatus::IDLE){
+     if(disable_gazebo_physics_for_pickup_){
+	    pickCart();
+	 }
+  }
+  
   elevator_status_.state = new_state;
 
   if (elevator_status_.state == robotnik_msgs::ElevatorStatus::ERROR_G_IO)
