@@ -15,6 +15,9 @@
 #include <robotnik_msgs/SetElevatorAction.h>
 #include <robotnik_msgs/inputs_outputs.h>
 #include <robotnik_msgs/set_digital_output.h>
+#include <robotnik_base_hw_sim/SimplePick.h>
+#include <robotnik_base_hw_sim/SimplePlace.h>
+
 
 #include <actionlib/server/simple_action_server.h>
 
@@ -90,6 +93,8 @@ private:
   ros::Subscriber io_sub_;       // I/O subscriber
  // Service Clients
   ros::ServiceClient set_digital_output_client;
+  ros::ServiceClient gazebo_simple_pick_service_client;
+  ros::ServiceClient gazebo_simple_place_service_client;
   // Service Servers
   ros::ServiceServer set_elevator_srv_;
   ros::ServiceServer enable_srv_;
@@ -117,6 +122,14 @@ private:
   double elevator_current_position_;  // The position to publish
   bool enabled_; 						//Flag to accept any type of command
   bool init_ok; // flag true after init
+  double elevation_action_time_;	// time needed to perform the any elevation action
+  
+  // GAZEBO FAKE ELEVATOR PARAMS
+  bool disable_gazebo_physics_for_pickup_;	//
+  std::string gazebo_simple_pick_service_name_;
+  std::string gazebo_simple_place_service_name_;
+  std::string gazebo_robot_model_;
+  geometry_msgs::Pose elevation_offset;
   
   void readJointStates();
   void writeJointCommands();
@@ -126,6 +139,8 @@ private:
 
   void ioCallback(const robotnik_msgs::inputs_outputsConstPtr& msg);
   int setDigitalOutput(int number, bool value);
+  int pickCart();
+  int placeCart();
 
   actionlib::SimpleActionServer<robotnik_msgs::SetElevatorAction>* elevator_action_server_;
   robotnik_msgs::SetElevatorFeedback elevator_action_feedback_;

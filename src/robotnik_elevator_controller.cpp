@@ -66,9 +66,16 @@ bool RobotnikElevatorController::init(hardware_interface::EffortJointInterface* 
   controller_nh.param("elevator_digital_input_up", elevator_digital_input_up_, ROBOTNIK_ELEVATOR_DEFAULT_INPUT_UP);
   controller_nh.param("elevator_digital_input_down", elevator_digital_input_down_, ROBOTNIK_ELEVATOR_DEFAULT_INPUT_DOWN);
   controller_nh.param<double>("elevator_position_up", elevator_position_up_, ROBOTNIK_ELEVATOR_DEFAULT_POS_UP);
-  controller_nh.param<double>("elevator_position_down_", elevator_position_down_, ROBOTNIK_ELEVATOR_DEFAULT_POS_DOWN);
+  controller_nh.param<double>("elevator_position_down", elevator_position_down_, ROBOTNIK_ELEVATOR_DEFAULT_POS_DOWN);
+  controller_nh.param<double>("elevation_action_time", elevation_action_time_, ROBOTNIK_ELEVATOR_DEFAULT_ELEVATOR_ACTION_TIME);
   controller_nh.param("set_digital_output_service_hw", set_digital_output_service_hw_, set_digital_output_service_hw_);
   controller_nh.param<std::string>("joint/elevator_joint/name", elevator_joint_name_, "robotnik_elevator_platform_joint");
+  
+  controller_nh.param<bool>("gazebo/disable_gazebo_physics_for_pickup", disable_gazebo_physics_for_pickup_, true);
+  controller_nh.param<std::string>("gazebo/pickup_service", gazebo_simple_pick_service_name_, "/elevator_fake_pickup_gazebo/simple_pick");
+  controller_nh.param<std::string>("gazebo/place_service", gazebo_simple_place_service_name_, "/elevator_fake_pickup_gazebo/simple_place");
+  controller_nh.param<std::string>("gazebo/robot_model", gazebo_robot_model_, "rb2_a");
+  controller_nh.param<double>("gazebo/elevation_offset_z", elevation_offset.position.z, 0.05);
 
   if (elevator_digital_output_up_ < 1)
   {
@@ -117,7 +124,12 @@ bool RobotnikElevatorController::init(hardware_interface::EffortJointInterface* 
   enable_srv_ = root_nh.advertiseService("robotnik_base_control/enable", &RobotnikElevatorController::enableSrvCallback, this);
 
   set_digital_output_client = root_nh.serviceClient<robotnik_msgs::set_digital_output>(set_digital_output_service_hw_);
-
+  
+  if(disable_gazebo_physics_for_pickup_){
+	  gazebo_simple_pick_service_client = root_nh.serviceClient<robotnik_base_hw_sim::SimplePick>(gazebo_simple_pick_service_name_);
+	  gazebo_simple_place_service_client = root_nh.serviceClient<robotnik_base_hw_sim::SimplePlace>(gazebo_simple_place_service_name_);
+  }
+  
   elevator_action_server_ = new actionlib::SimpleActionServer<robotnik_msgs::SetElevatorAction>(
       root_nh, "robotnik_base_control/set_elevator", boost::bind(&RobotnikElevatorController::executeElevatorCallback, this, _1), false);
 
@@ -343,8 +355,11 @@ void RobotnikElevatorController::elevatorControlLoop(const ros::Time& time)
     else
     {
       // Checking timeout
-      if ((time - elevator_action_init_time).toSec() > ROBOTNIK_ELEVATOR_DEFAULT_ELEVATOR_ACTION_TIME)
+      if ((time - elevator_action_init_time).toSec() > elevation_action_time_)
       {
+		 if(disable_gazebo_physics_for_pickup_){
+			 pickCart();
+		 }
          elevator_status_.position = robotnik_msgs::ElevatorStatus::UP;
          // Setting the fake joint of the controller
 		 elevator_current_position_ = elevator_position_up_;
@@ -364,8 +379,11 @@ void RobotnikElevatorController::elevatorControlLoop(const ros::Time& time)
     else
     {
       // Checking timeout
-      if ((time - elevator_action_init_time).toSec() > ROBOTNIK_ELEVATOR_DEFAULT_ELEVATOR_ACTION_TIME)
+      if ((time - elevator_action_init_time).toSec() > elevation_action_time_)
       {
+	   if(disable_gazebo_physics_for_pickup_){
+			 placeCart();
+		}
        elevator_status_.position = robotnik_msgs::ElevatorStatus::DOWN;
        // Setting the fake joint of the controller
        elevator_current_position_ = elevator_position_down_;
@@ -393,9 +411,6 @@ void RobotnikElevatorController::switchToElevatorState(string new_state)
   if (elevator_status_.state == robotnik_msgs::ElevatorStatus::ERROR_G_IO)
   {
     elevator_status_.position = robotnik_msgs::ElevatorStatus::UNKNOWN;
-    ROS_WARN("%s::switchToElevatorState: elevator on error, disabling all the outputs", controller_name_.c_str());
-    setDigitalOutput(elevator_digital_output_down_, false);
-    setDigitalOutput(elevator_digital_output_up_, false);
   }
   else if (elevator_status_.state == robotnik_msgs::ElevatorStatus::IDLE)
   {
@@ -410,9 +425,6 @@ void RobotnikElevatorController::switchToElevatorState(string new_state)
   {
     elevator_action_init_time = ros::Time::now();  // Using the same timer to stay in this error state
     elevator_status_.position = robotnik_msgs::ElevatorStatus::UNKNOWN;
-    ROS_WARN("%s::switchToElevatorState: elevator on error, disabling all the outputs", controller_name_.c_str());
-    setDigitalOutput(elevator_digital_output_down_, false);
-    setDigitalOutput(elevator_digital_output_up_, false);
   }
 }
 
@@ -491,6 +503,45 @@ int RobotnikElevatorController::setDigitalOutput(int number, bool value)
   return 0;
 }
 
+int RobotnikElevatorController::pickCart(){
+	robotnik_base_hw_sim::SimplePick pick_srv;
+	
+	pick_srv.request.robot_model = gazebo_robot_model_;
+	pick_srv.request.pose.position.z = 0.06;
+	
+	if(not gazebo_simple_pick_service_client.call(pick_srv)){
+		ROS_ERROR_STREAM_NAMED(controller_name_, "::pickCart: error calling service " << gazebo_simple_pick_service_name_);
+		return -1;
+	}
+	
+	if(pick_srv.response.success)
+		return 0;
+	else{
+		ROS_ERROR_STREAM_NAMED(controller_name_, "::pickCart: response from service: " << pick_srv.response.msg);
+		return -1;
+	}
+}
+
+
+int RobotnikElevatorController::placeCart(){
+	
+	robotnik_base_hw_sim::SimplePlace place_srv;
+	
+	place_srv.request.robot_model = gazebo_robot_model_;
+	
+	if(not gazebo_simple_place_service_client.call(place_srv)){
+		ROS_ERROR_STREAM_NAMED(controller_name_, "::placeCart: error calling service " << gazebo_simple_place_service_name_);
+		return -1;
+	}
+	
+	if(place_srv.response.success)
+		return 0;
+	else{
+		ROS_ERROR_STREAM_NAMED(controller_name_, "::placeCart: response from service: " << place_srv.response.msg);
+		return -1;
+	}
+	
+}
 
 /**     \fn  RobotnikElevatorController::enableSrvCallback
  *		Enables/Disables the controller to accept or not velocity and action commands
