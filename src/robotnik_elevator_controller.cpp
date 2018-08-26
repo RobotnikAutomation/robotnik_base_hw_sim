@@ -516,7 +516,6 @@ int RobotnikElevatorController::pickCart(){
 	robotnik_base_hw_sim::SimplePick pick_srv;
 	
 	pick_srv.request.robot_model = gazebo_robot_model_;
-	pick_srv.request.pose.position.z = 0.06;
 	
 	if(not gazebo_simple_pick_service_client.call(pick_srv)){
 		ROS_ERROR_STREAM_NAMED(controller_name_, "::pickCart: error calling service " << gazebo_simple_pick_service_name_);

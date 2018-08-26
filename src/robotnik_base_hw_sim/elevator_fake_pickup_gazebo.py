@@ -242,7 +242,13 @@ class ElevatorFakePickup:
 			else:
 				rospy.logerr('%s::__init__: param model has to be defined for every model: %s', self.node_name, str(cfg))
 				exit()
-			self._gazebo_robots[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link)}
+			if cfg.has_key('elevation_z'):
+				elevation_z = cfg['elevation_z']
+			else:
+				rospy.logerr('%s::__init__: param model has to be defined for every model: %s', self.node_name, str(cfg))
+				exit()
+				
+			self._gazebo_robots[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link), 'elevation_z': elevation_z}
 
 
 		self._object_models_config = args['objects']
@@ -909,35 +915,17 @@ class ElevatorFakePickup:
 		object_link = gazebo_object_default_link
 		object_model = object_link.split('::')[0]
 		robot_link = robot_default_link
-		ret, properties = self.getGazeboLinkProperties(object_link)
 		
-		if not ret:
-			return False, "Error getting gazebo link properties of %s"%object_link
+		ret = self._setModelLinksPropertiesForPickPlace(model=object_model, action='pick')
 		
-		# save the properties of the object link
-		self._gazebo_objects[object_model]['links'][object_link].update_properties(properties)
-		
-		# set link properties of the object
-		# 	remove gravity (TODO: from all the links of the object)
-		set_link_properties_srv = SetLinkPropertiesRequest()
-		set_link_properties_srv.link_name = object_link
-		set_link_properties_srv.com = properties.com
-		set_link_properties_srv.gravity_mode = False
-		set_link_properties_srv.mass = properties.mass
-		set_link_properties_srv.ixx = properties.ixx
-		set_link_properties_srv.ixy = properties.ixy
-		set_link_properties_srv.ixz = properties.ixz
-		set_link_properties_srv.iyy = properties.iyy
-		set_link_properties_srv.iyz = properties.iyz
-		set_link_properties_srv.izz = properties.izz
-		
-		if not self.setGazeboLinkProperties(set_link_properties_srv):
-			return False, "Error setting gazebo link properties of %s"%object_link
-		
+		if ret!=0:
+			return False, "Error setting link properties for model %s"%(req.object_model)
 		
 		# adding new pick
+		t_pose = Pose()
+		t_pose.position.z = self._gazebo_robots[req.robot_model]['elevation_z']
 		pick_id = '%s->%s'%(req.robot_model, object_model)
-		self._current_picks[pick_id] = GazeboPickAndPlace(robot_link=robot_link, object_link = object_link, transform_pose = req.pose)
+		self._current_picks[pick_id] = GazeboPickAndPlace(robot_link=robot_link, object_link = object_link, transform_pose = t_pose)
 		
 		#rospy.loginfo('%s:simplePickServiceCb: attach %s::%s into %s::%s ', self.node_name, req.object_model, req.object_link, req.robot_model, req.robot_link  )	
 	
@@ -1058,7 +1046,8 @@ class ElevatorFakePickup:
 			@param p2 as geometry_msgs/Pose
 			@return the Euclidean distance
 		'''
-		return math.sqrt(pow(p1.position.x - p2.position.x, 2) + pow(p1.position.y - p2.position.y, 2) + pow(p1.position.z - p2.position.z, 2))
+		#return math.sqrt(pow(p1.position.x - p2.position.x, 2) + pow(p1.position.y - p2.position.y, 2) + pow(p1.position.z - p2.position.z, 2))
+		return math.sqrt(pow(p1.position.x - p2.position.x, 2) + pow(p1.position.y - p2.position.y, 2) )
 
 
 	def _setModelLinksPropertiesForPickPlace(self, model, action):
