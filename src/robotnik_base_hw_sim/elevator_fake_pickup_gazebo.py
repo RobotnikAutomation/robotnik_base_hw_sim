@@ -587,28 +587,13 @@ class ElevatorFakePickup:
 				# change the link name
 				robot_link_state.link_name = object_link
 				
-				if not self.setGazeboLinkState(robot_link_state):
-					rospy.logerr_throttle(5, "%s::readyState: Error placing the pick %s"%(self.node_name, pick))
+				#if not self.setGazeboLinkState(robot_link_state):
+				#	rospy.logerr_throttle(5, "%s::readyState: Error placing the pick %s"%(self.node_name, pick))
 
 				#
-				# Get link properties of the object
-				properties = self._gazebo_objects[object_model]['links'][object_link].get_properties()
-
-				# set link properties of the object
-				# 	bring gravity bck(TODO: from all the links of the object)
-				set_link_properties_srv = SetLinkPropertiesRequest()
-				set_link_properties_srv.link_name = object_link
-				set_link_properties_srv.com = properties.com
-				set_link_properties_srv.gravity_mode = True
-				set_link_properties_srv.mass = properties.mass
-				set_link_properties_srv.ixx = properties.ixx
-				set_link_properties_srv.ixy = properties.ixy
-				set_link_properties_srv.ixz = properties.ixz
-				set_link_properties_srv.iyy = properties.iyy
-				set_link_properties_srv.iyz = properties.iyz
-				set_link_properties_srv.izz = properties.izz
+				ret = self._setModelLinksPropertiesForPickPlace(model=object_model, action='place')
 				
-				if not self.setGazeboLinkProperties(set_link_properties_srv):
+				if ret!=0:
 					rospy.logerr_throttle(5, "Error setting gazebo link properties of %s"%object_link)
 				else:
 					# remove the pick
@@ -841,34 +826,14 @@ class ElevatorFakePickup:
 
 			if req.robot_model == pick_robot_model and req.object_model != pick_object_model: #allows the same robot picks the same object 
 				return False, "The robot %s is currently picking another object (%s)"%(req.robot_model,pick)
-		#
-		# Get link properties of the object
+		
+		
+		ret = self._setModelLinksPropertiesForPickPlace(model=req.object_model, action='pick')
+		
+		if ret!=0:
+			return False, "Error setting link properties for model %s"%(req.object_model)
+		
 		object_link='%s::%s'%(req.object_model, req.object_link)
-		ret, properties = self.getGazeboLinkProperties(object_link)
-		
-		if not ret:
-			return False, "Error getting gazebo link properties of %s"%object_link
-		
-		# save the properties of the object link
-		self._gazebo_objects[req.object_model]['links'][object_link].update_properties(properties)
-		
-		# set link properties of the object
-		# 	remove gravity (TODO: from all the links of the object)
-		set_link_properties_srv = SetLinkPropertiesRequest()
-		set_link_properties_srv.link_name = object_link
-		set_link_properties_srv.com = properties.com
-		set_link_properties_srv.gravity_mode = False
-		set_link_properties_srv.mass = properties.mass
-		set_link_properties_srv.ixx = properties.ixx
-		set_link_properties_srv.ixy = properties.ixy
-		set_link_properties_srv.ixz = properties.ixz
-		set_link_properties_srv.iyy = properties.iyy
-		set_link_properties_srv.iyz = properties.iyz
-		set_link_properties_srv.izz = properties.izz
-		
-		if not self.setGazeboLinkProperties(set_link_properties_srv):
-			return False, "Error setting gazebo link properties of %s"%object_link
-		
 		#
 		# get link state of the robot
 		robot_link='%s::%s'%(req.robot_model, req.robot_link)
@@ -1096,6 +1061,80 @@ class ElevatorFakePickup:
 		return math.sqrt(pow(p1.position.x - p2.position.x, 2) + pow(p1.position.y - p2.position.y, 2) + pow(p1.position.z - p2.position.z, 2))
 
 
+	def _setModelLinksPropertiesForPickPlace(self, model, action):
+		'''
+			Sets the links properties for each action 
+			@param model as string, the model to modify
+			@param action as string, pick or place
+			@return 0 if Ok
+			@return -1 if model doesn't exist
+			@return -2 if error getting link properties
+			@return -3 if error setting link properties
+		'''
+		
+		if model not in self._gazebo_objects:
+			return -1
+					
+		for link in self._gazebo_objects[model]['links']:
+			
+			if action == 'pick':
+				
+				#
+				# Get link properties of the object
+				#
+				ret, properties = self.getGazeboLinkProperties(link)
+				
+				if not ret:
+					rospy.logerr("%s::_setModelLinksPropertiesForPickPlace: Error getting gazebo link properties of %s",self.node_name, link)
+					return -2 
+				
+				# save the properties of the object link
+				self._gazebo_objects[model]['links'][link].update_properties(properties)
+				
+				# set link properties of the object
+				# 	remove gravity (TODO: from all the links of the object)
+				set_link_properties_srv = SetLinkPropertiesRequest()
+				set_link_properties_srv.link_name = link
+				set_link_properties_srv.com = properties.com
+				set_link_properties_srv.gravity_mode = False
+				set_link_properties_srv.mass = properties.mass
+				set_link_properties_srv.ixx = properties.ixx
+				set_link_properties_srv.ixy = properties.ixy
+				set_link_properties_srv.ixz = properties.ixz
+				set_link_properties_srv.iyy = properties.iyy
+				set_link_properties_srv.iyz = properties.iyz
+				set_link_properties_srv.izz = properties.izz
+				
+				if not self.setGazeboLinkProperties(set_link_properties_srv):
+					rospy.logerr("%s::_setModelLinksPropertiesForPickPlace: Error setting gazebo link properties of %s",self.node_name, link)
+					return -3
+				rospy.loginfo("%s::_setModelLinksPropertiesForPickPlace: setting gravity false for link %s",self.node_name, link)
+			
+			elif action == 'place':
+		
+				# Get stored link properties of the object
+				properties = self._gazebo_objects[model]['links'][link].get_properties()
+
+				# set link properties of the object
+				# 	bring gravity bck(TODO: from all the links of the object)
+				set_link_properties_srv = SetLinkPropertiesRequest()
+				set_link_properties_srv.link_name = link
+				set_link_properties_srv.com = properties.com
+				set_link_properties_srv.gravity_mode = True
+				set_link_properties_srv.mass = properties.mass
+				set_link_properties_srv.ixx = properties.ixx
+				set_link_properties_srv.ixy = properties.ixy
+				set_link_properties_srv.ixz = properties.ixz
+				set_link_properties_srv.iyy = properties.iyy
+				set_link_properties_srv.iyz = properties.iyz
+				set_link_properties_srv.izz = properties.izz
+				
+				if not self.setGazeboLinkProperties(set_link_properties_srv):
+					rospy.logerr("%s::_setModelLinksPropertiesForPickPlace: Error setting gazebo link properties of %s",self.node_name, link)
+					return -3
+					
+		return 0
+		
 	
 def main():
 
