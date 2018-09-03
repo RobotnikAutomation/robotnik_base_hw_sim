@@ -245,7 +245,7 @@ class ElevatorFakePickup:
 			if cfg.has_key('elevation_z'):
 				elevation_z = cfg['elevation_z']
 			else:
-				rospy.logerr('%s::__init__: param model has to be defined for every model: %s', self.node_name, str(cfg))
+				rospy.logerr('%s::__init__: param elevation_z has to be defined for every model: %s', self.node_name, str(cfg))
 				exit()
 				
 			self._gazebo_robots[model] = {'model': GazeboModelState(), 'links': {}, 'default_link':'%s::%s'%(model,default_link), 'elevation_z': elevation_z}

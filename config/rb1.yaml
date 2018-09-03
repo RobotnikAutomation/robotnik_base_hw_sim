@@ -1,0 +1,14 @@
+motors:  
+  m1:
+    joint: rb1_base_a_left_joint
+    can_id: 1
+  m2:
+    joint: rb1_base_a_right_joint
+    can_id: 2
+battery_voltage: 26
+battery_amperes: 15
+battery_alarm_voltage: 24.5
+num_inputs_per_driver: 5
+num_outputs_per_driver: 3
+# A/h (to simulate battery discharge)
+power_consumption: 2
