@@ -39,6 +39,7 @@ import time, threading
 from robotnik_msgs.msg import State, RobotnikMotorsStatus, inputs_outputs,MotorStatus, BatteryStatus, BatteryDockingStatusStamped, BatteryDockingStatus
 from std_msgs.msg import Bool, Float32
 from std_msgs.msg import Bool, Float32
+from robotnik_msgs.srv import enable_disable
 
 DEFAULT_FREQ = 100.0
 MAX_FREQ = 500.0
@@ -160,7 +161,7 @@ class RobotnikBaseHwSim:
 		self._docking_status_publisher = rospy.Publisher('~battery/docking_status', BatteryDockingStatusStamped, queue_size=10)
 		self._battery_alarm_publisher = rospy.Publisher('~battery/alarm', Bool, queue_size=10)
 		self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
-
+		self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
 		# Subscribers
 		# topic_name, msg type, callback, queue_size
 		# self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
@@ -440,6 +441,17 @@ class RobotnikBaseHwSim:
 		return
 
 
+	def toogleRobotOperationserviceCb(self, req):
+		'''
+			ROS service server to toogle robot operation
+			@param req: Required action
+			@type req: robotnik_msgs/enable_disable
+		'''
+		# DEMO
+		rospy.loginfo('%s::toogleRobotOperationserviceCb: toogling robot to %s', self.node_name, str(req.value))
+
+		return True
+
 	"""
 	def topicCb(self, msg):
 		'''
@@ -451,14 +463,7 @@ class RobotnikBaseHwSim:
 		rospy.loginfo('RobotnikBaseHwSim:topicCb')
 
 
-	def serviceCb(self, req):
-		'''
-			ROS service server
-			@param req: Required action
-			@type req: std_srv/Empty
-		'''
-		# DEMO
-		rospy.loginfo('RobotnikBaseHwSim:serviceCb')
+
 	"""
 
 def main():
