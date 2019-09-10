@@ -41,6 +41,7 @@ RobotnikElevatorController::RobotnikElevatorController()
   elevator_action_.action = robotnik_msgs::ElevatorAction::NO_ACTION;
   elevator_status_.state = robotnik_msgs::ElevatorStatus::IDLE;
   elevator_status_.position = robotnik_msgs::ElevatorStatus::UNKNOWN;
+  //elevator_status_.height = 0;
   elevator_current_position_ = elevator_position_down_;
   enabled_ = true; 
   init_ok = false;
@@ -225,7 +226,7 @@ void RobotnikElevatorController::executeElevatorCallback(const robotnik_msgs::Se
     return;
   }
   bool timedout = false;
-  ros::Duration timeout(15);
+  ros::Duration timeout(20);
   initial_time = ros::Time::now();
   rate.sleep();
   while (((goal->action.action == robotnik_msgs::ElevatorAction::RAISE and
