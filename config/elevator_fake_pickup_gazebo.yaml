@@ -5,16 +5,16 @@
 
 objects:
  -
-   model: rb2cart
-   default_link: link_0
+   model: rb1_cart
+   default_link: walls
  -
-   model: rb2cart_0
-   default_link: link_0
+   model: rb1_cart_clone
+   default_link: walls
 
 robots:
 - 
-   model: rb2_a
-   default_link: rb2_a_base_footprint
+   model: rb1_base_a
+   default_link: rb1_a_base_footprint
    elevation_z: 0.5
 - 
    model: rb2_b
