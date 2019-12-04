@@ -131,7 +131,6 @@ class RobotnikBaseHwSim:
 		self._battery_data.is_charging = False
 		self._docking_status = BatteryDockingStatusStamped()
 		self._docking_status.status.operation_mode = BatteryDockingStatus.MODE_DISABLED
-		self._docking_status.status.battery_current = 0.0
 		self._docking_status.status.contact_relay_status = False
 		self._docking_status.status.charger_relay_status = False
 
