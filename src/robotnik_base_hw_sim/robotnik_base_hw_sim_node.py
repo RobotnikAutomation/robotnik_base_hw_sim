@@ -35,6 +35,7 @@
 import rospy
 
 import time, threading
+import sys
 
 from robotnik_msgs.msg import State, RobotnikMotorsStatus, inputs_outputs,MotorStatus, BatteryStatus, BatteryDockingStatusStamped, BatteryDockingStatus
 from std_msgs.msg import Bool, Float32
@@ -78,6 +79,9 @@ class RobotnikBaseHwSim:
 		self._num_analog_outputs_per_driver = args['num_analog_outputs_per_driver']
 		self._num_outputs_per_driver = args['num_outputs_per_driver']
 		self._power_consumption = args['power_consumption']
+		self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
+		self._voltage_analog_input_number = args['voltage_analog_input_number']
+		self._current_analog_input_number = args['current_analog_input_number']
 
 		self.real_freq = 0.0
 
@@ -112,7 +116,17 @@ class RobotnikBaseHwSim:
 		for i in range(len(self._motors)*self._num_analog_outputs_per_driver):
 			self._io.analog_outputs.append(False)
 
+		if len(self._k_analog_inputs_multipliers) != len(self._io.analog_inputs):
+			rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
+			self._k_analog_inputs_multipliers = [1] * len(self._io.analog_inputs)
 
+		if self._voltage_analog_input_number > len(self._io.analog_inputs):
+			rospy.logerr('%s::__init__: voltage_analog_input_number (%d) greater from the len of analog inputs (%d).',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
+			sys.exit()
+
+		if self._current_analog_input_number > len(self._io.analog_inputs):
+			rospy.logerr('%s::__init__: _current_analog_input_number (%d) greater from the len of analog inputs (%d).',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
+			sys.exit()
 
 		self._motor_status = RobotnikMotorsStatus()
 		for i in self._motors:
@@ -297,6 +311,8 @@ class RobotnikBaseHwSim:
 		'''
 			Publish topics at standard frequency
 		'''
+		self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._battery_voltage
+		self._io.analog_inputs[self._current_analog_input_number - 1] = self._power_consumption
 		self._io_publisher.publish(self._io)
 		self._motor_status_publisher.publish(self._motor_status)
 		self._voltage_publisher.publish(self._battery_voltage)
@@ -478,7 +494,10 @@ def main():
 	  'num_outputs_per_driver': 3,
 	  'num_analog_inputs_per_driver': 1,
 	  'num_analog_outputs_per_driver': 0,
-	  'power_consumption': 2
+	  'power_consumption': 2,
+	  'k_analog_inputs_multipliers': [],
+	  'voltage_analog_input_number': 1,
+	  'current_analog_input_number': 2
 	}
 
 	args = {}
