@@ -123,16 +123,7 @@ class RobotnikBaseHwSim:
 		self._battery_voltage = self._battery_voltage
 		self._battery_alarm = False
 		self._emergency_stop = False
-		self._battery_data = BatteryStatus()
-		self._battery_data.voltage = 0.0
-		self._battery_data.level = 0.0
-		self._battery_data.time_remaining = 0
-		self._battery_data.time_charging = 0
-		self._battery_data.is_charging = False
-		self._docking_status = BatteryDockingStatusStamped()
-		self._docking_status.status.operation_mode = BatteryDockingStatus.MODE_DISABLED
-		self._docking_status.status.contact_relay_status = False
-		self._docking_status.status.charger_relay_status = False
+
 
 	def setup(self):
 		'''
@@ -155,10 +146,10 @@ class RobotnikBaseHwSim:
 		self._state_publisher = rospy.Publisher('~state', State, queue_size=10)
 		self._io_publisher = rospy.Publisher('~io', inputs_outputs, queue_size=10)
 		self._motor_status_publisher = rospy.Publisher('~status', RobotnikMotorsStatus, queue_size=10)
-		self._voltage_publisher = rospy.Publisher('~battery/voltage', Float32, queue_size=10)
-		self._battery_publisher = rospy.Publisher('~battery/data', BatteryStatus, queue_size=10)
-		self._docking_status_publisher = rospy.Publisher('~battery/docking_status', BatteryDockingStatusStamped, queue_size=10)
-		self._battery_alarm_publisher = rospy.Publisher('~battery/alarm', Bool, queue_size=10)
+		self._voltage_publisher = rospy.Publisher('~voltage', Float32, queue_size=10)
+		#self._battery_publisher = rospy.Publisher('~battery/data', BatteryStatus, queue_size=10)
+		#self._docking_status_publisher = rospy.Publisher('~battery/docking_status', BatteryDockingStatusStamped, queue_size=10)
+		#self._battery_alarm_publisher = rospy.Publisher('~battery/alarm', Bool, queue_size=10)
 		self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
 		self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
 		# Subscribers
@@ -300,12 +291,7 @@ class RobotnikBaseHwSim:
 		self._io_publisher.publish(self._io)
 		self._motor_status_publisher.publish(self._motor_status)
 		self._voltage_publisher.publish(self._battery_voltage)
-		self._battery_alarm_publisher.publish(self._battery_alarm)
 		self._emergency_stop_publisher.publish(self._emergency_stop)
-		self._battery_data.voltage = self._battery_voltage
-		self._battery_publisher.publish(self._battery_data)
-		self._docking_status.header.stamp = rospy.Time.now()
-		self._docking_status_publisher.publish(self._docking_status)
 
 		return 0
 
