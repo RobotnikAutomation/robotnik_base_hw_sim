@@ -74,6 +74,8 @@ class RobotnikBaseHwSim:
 		self._battery_amperes = args['battery_amperes']
 		self._battery_alarm_voltage = args['battery_alarm_voltage']
 		self._num_inputs_per_driver = args['num_inputs_per_driver']
+		self._num_analog_inputs_per_driver = args['num_analog_inputs_per_driver']
+		self._num_analog_outputs_per_driver = args['num_analog_outputs_per_driver']
 		self._num_outputs_per_driver = args['num_outputs_per_driver']
 		self._power_consumption = args['power_consumption']
 
@@ -100,7 +102,17 @@ class RobotnikBaseHwSim:
 		self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
 
 		self._io = inputs_outputs()
-		#self._io.digita
+
+		for i in range(len(self._motors)*self._num_inputs_per_driver):
+			self._io.digital_inputs.append(False)
+		for i in range(len(self._motors)*self._num_outputs_per_driver):
+			self._io.digital_outputs.append(False)
+		for i in range(len(self._motors)*self._num_analog_inputs_per_driver):
+			self._io.analog_inputs.append(False)
+		for i in range(len(self._motors)*self._num_analog_outputs_per_driver):
+			self._io.analog_outputs.append(False)
+
+
 
 		self._motor_status = RobotnikMotorsStatus()
 		for i in self._motors:
@@ -147,9 +159,6 @@ class RobotnikBaseHwSim:
 		self._io_publisher = rospy.Publisher('~io', inputs_outputs, queue_size=10)
 		self._motor_status_publisher = rospy.Publisher('~status', RobotnikMotorsStatus, queue_size=10)
 		self._voltage_publisher = rospy.Publisher('~voltage', Float32, queue_size=10)
-		#self._battery_publisher = rospy.Publisher('~battery/data', BatteryStatus, queue_size=10)
-		#self._docking_status_publisher = rospy.Publisher('~battery/docking_status', BatteryDockingStatusStamped, queue_size=10)
-		#self._battery_alarm_publisher = rospy.Publisher('~battery/alarm', Bool, queue_size=10)
 		self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
 		self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
 		# Subscribers
@@ -467,6 +476,8 @@ def main():
 	  'battery_alarm_voltage': 22.5,
 	  'num_inputs_per_driver': 5,
 	  'num_outputs_per_driver': 3,
+	  'num_analog_inputs_per_driver': 1,
+	  'num_analog_outputs_per_driver': 0,
 	  'power_consumption': 2
 	}
 
