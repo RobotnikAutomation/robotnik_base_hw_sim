@@ -23,3 +23,4 @@ num_analog_inputs_per_driver: 1
 k_analog_inputs_multipliers: [6.978947368, -12.5, 1.0, 1.0]
 voltage_analog_input_number: 1
 current_analog_input_number: 2
+charge_digital_output_number: 1

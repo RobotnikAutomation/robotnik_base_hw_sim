@@ -40,7 +40,7 @@ import sys
 from robotnik_msgs.msg import State, RobotnikMotorsStatus, inputs_outputs,MotorStatus, BatteryStatus, BatteryDockingStatusStamped, BatteryDockingStatus
 from std_msgs.msg import Bool, Float32
 from std_msgs.msg import Bool, Float32
-from robotnik_msgs.srv import enable_disable
+from robotnik_msgs.srv import enable_disable, set_digital_output
 
 DEFAULT_FREQ = 100.0
 MAX_FREQ = 500.0
@@ -82,6 +82,7 @@ class RobotnikBaseHwSim:
 		self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
 		self._voltage_analog_input_number = args['voltage_analog_input_number']
 		self._current_analog_input_number = args['current_analog_input_number']
+		self._charge_digital_output_number = args['charge_digital_output_number']
 
 		self.real_freq = 0.0
 
@@ -120,12 +121,16 @@ class RobotnikBaseHwSim:
 			rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
 			self._k_analog_inputs_multipliers = [1] * len(self._io.analog_inputs)
 
-		if self._voltage_analog_input_number > len(self._io.analog_inputs):
-			rospy.logerr('%s::__init__: voltage_analog_input_number (%d) greater from the len of analog inputs (%d).',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
+		if self._voltage_analog_input_number <= 0 or self._voltage_analog_input_number > len(self._io.analog_inputs):
+			rospy.logerr('%s::__init__: voltage_analog_input_number (%d) out of range [1, %d].',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
 			sys.exit()
 
-		if self._current_analog_input_number > len(self._io.analog_inputs):
-			rospy.logerr('%s::__init__: _current_analog_input_number (%d) greater from the len of analog inputs (%d).',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
+		if self._current_analog_input_number <= 0 or self._current_analog_input_number > len(self._io.analog_inputs):
+			rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
+			sys.exit()
+
+		if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
+			rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].',self.node_name, self._charge_digital_output_number, len(self._io.digital_outputs))
 			sys.exit()
 
 		self._motor_status = RobotnikMotorsStatus()
@@ -179,7 +184,7 @@ class RobotnikBaseHwSim:
 		# topic_name, msg type, callback, queue_size
 		# self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
 		# Service Servers
-		# self.service_server = rospy.Service('~service', Empty, self.serviceCb)
+		self.set_digitalservice_server = rospy.Service('~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
 		# Service Clients
 		# self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
 		# ret = self.service_client.call(ServiceMsg)
@@ -312,7 +317,10 @@ class RobotnikBaseHwSim:
 			Publish topics at standard frequency
 		'''
 		self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._battery_voltage
-		self._io.analog_inputs[self._current_analog_input_number - 1] = self._power_consumption
+		if self._io.digital_outputs[self._charge_digital_output_number - 1] is True: # charging
+			self._io.analog_inputs[self._current_analog_input_number - 1] = -self._power_consumption
+		else:
+			self._io.analog_inputs[self._current_analog_input_number - 1] = self._power_consumption
 		self._io_publisher.publish(self._io)
 		self._motor_status_publisher.publish(self._motor_status)
 		self._voltage_publisher.publish(self._battery_voltage)
@@ -462,6 +470,21 @@ class RobotnikBaseHwSim:
 
 		return True
 
+	def setDigitalOutputServiceCb(self, req):
+		'''
+			ROS service server to set the hw digital outputs
+			@param req: Required action
+			@type req: robotnik_msgs/set_digital_output
+		'''
+		if (req.output <= 0 or req.output > len(self._io.digital_outputs)):
+			rospy.loginfo('%s::setDigitalOutputServiceCb: output %d out of range', self.node_name, req.output)
+			return False
+
+		rospy.loginfo('%s::setDigitalOutputServiceCb: setting output %d to %d', self.node_name, req.output, req.value)
+		self._io.digital_outputs[req.output - 1] = req.value
+
+		return True
+
 	"""
 	def topicCb(self, msg):
 		'''
@@ -497,7 +520,8 @@ def main():
 	  'power_consumption': 2,
 	  'k_analog_inputs_multipliers': [],
 	  'voltage_analog_input_number': 1,
-	  'current_analog_input_number': 2
+	  'current_analog_input_number': 2,
+	  'charge_digital_output_number': 1,
 	}
 
 	args = {}
