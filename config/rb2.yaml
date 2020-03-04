@@ -1,9 +1,9 @@
 motors:
   m1:
-    joint: rb2_a_left_joint
+    joint: robot_left_joint
     can_id: 1
   m2:
-    joint: rb2_a_right_joint
+    joint: robot_right_joint
     can_id: 2
 battery_voltage: 53
 battery_amperes: 15
