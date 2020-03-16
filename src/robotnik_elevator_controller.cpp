@@ -40,7 +40,7 @@ RobotnikElevatorController::RobotnikElevatorController()
   // TODO: initialize all variables
   elevator_action_.action = robotnik_msgs::ElevatorAction::NO_ACTION;
   elevator_status_.state = robotnik_msgs::ElevatorStatus::IDLE;
-  elevator_status_.position = robotnik_msgs::ElevatorStatus::UNKNOWN;
+  elevator_status_.position = robotnik_msgs::ElevatorStatus::DOWN;
   elevator_current_position_ = elevator_position_down_;
   enabled_ = true; 
   init_ok = false;
