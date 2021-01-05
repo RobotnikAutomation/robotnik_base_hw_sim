@@ -31,7 +31,7 @@ namespace robotnik_elevator_controller
 {
 
 
-class RobotnikElevatorController : public controller_interface::Controller<hardware_interface::EffortJointInterface>
+class RobotnikElevatorController : public controller_interface::Controller<hardware_interface::PositionJointInterface>
 
 {
 public:
@@ -40,7 +40,7 @@ public:
   /**
   */
 
-  bool init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh);
+  bool init(hardware_interface::PositionJointInterface* hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh);
 
   /**
    * \brief Updates controller, i.e. computes the odometry and sets the new velocity commands
