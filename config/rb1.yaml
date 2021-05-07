@@ -17,7 +17,7 @@ battery_voltage:
   - [25.78, 20]
   - [25.48, 10]
   - [22.88, 0]
-battery_amperes: 15
+battery_amperes: 30
 battery_alarm_voltage: 24.5
 num_inputs_per_driver: 5
 num_outputs_per_driver: 3
