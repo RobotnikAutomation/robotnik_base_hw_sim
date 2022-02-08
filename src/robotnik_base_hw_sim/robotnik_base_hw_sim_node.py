@@ -73,19 +73,30 @@ class RobotnikBaseHwSim:
     		exit()
 
     	self._battery_voltage = args['battery_voltage']
-    	self._battery_amperes = args['battery_amperes']
-    	self._battery_alarm_voltage = args['battery_alarm_voltage']
-    	self._num_inputs_per_driver = args['num_inputs_per_driver']
-    	self._num_analog_inputs_per_driver = args['num_analog_inputs_per_driver']
-    	self._num_analog_outputs_per_driver = args['num_analog_outputs_per_driver']
-    	self._num_outputs_per_driver = args['num_outputs_per_driver']
-    	self._power_consumption = args['power_consumption']
-    	self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
-    	self._voltage_analog_input_number = args['voltage_analog_input_number']
-    	self._current_analog_input_number = args['current_analog_input_number']
-    	self._charge_digital_output_number = args['charge_digital_output_number']
+        if len(self._battery_voltage) == 0:
+            raise('battery_voltage argument has to be set')
+        self._current_battery_voltage = self._battery_voltage[0][0]
+        self._battery_amperes = args['battery_amperes']
+        self._current_battery_amperes = self._battery_amperes
+        self._battery_alarm_voltage = args['battery_alarm_voltage']
+        self._num_inputs_per_driver = args['num_inputs_per_driver']
+        self._num_analog_inputs_per_driver = args['num_analog_inputs_per_driver']
+        self._num_analog_outputs_per_driver = args['num_analog_outputs_per_driver']
+        self._num_outputs_per_driver = args['num_outputs_per_driver']
+        self._power_consumption = args['power_consumption']
+        if self._power_consumption <= 0:
+            raise("power_consumption argument has to be > 0")
+        self._current_power_consumption = self._power_consumption
+        self._power_charge = args['power_charge']
+        if self._power_charge <= 0:
+            raise("power_charge argument has to be > 0")
 
-    	self.real_freq = 0.0
+        self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
+        self._voltage_analog_input_number = args['voltage_analog_input_number']
+        self._current_analog_input_number = args['current_analog_input_number']
+        self._charge_digital_output_number = args['charge_digital_output_number']
+
+    	self.real_freq = 1.0
 
     	# Saves the state of the component
     	self.state = State.INIT_STATE
@@ -114,9 +125,9 @@ class RobotnikBaseHwSim:
     	for i in range(len(self._motors)*self._num_outputs_per_driver):
     		self._io.digital_outputs.append(False)
     	for i in range(len(self._motors)*self._num_analog_inputs_per_driver):
-    		self._io.analog_inputs.append(False)
+    		self._io.analog_inputs.append(0.0)
     	for i in range(len(self._motors)*self._num_analog_outputs_per_driver):
-    		self._io.analog_outputs.append(False)
+    		self._io.analog_outputs.append(0.0)
 
     	if len(self._k_analog_inputs_multipliers) != len(self._io.analog_inputs):
     		rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
@@ -149,11 +160,10 @@ class RobotnikBaseHwSim:
     		ms.activedriveflags = ['BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
     		ms.digitaloutputs = [False for i in range(self._num_inputs_per_driver)]
     		ms.digitalinputs = [False for i in range(self._num_outputs_per_driver)]
-    		ms.analoginputs = [False for i in range(self._num_analog_inputs_per_driver)]
+    		ms.analoginputs = [0.0 for i in range(self._num_analog_inputs_per_driver)]
     		self._motor_status.motor_status.append(ms)
 
 
-    	self._battery_voltage = self._battery_voltage
     	self._battery_alarm = False
     	self._emergency_stop = False
 
@@ -186,7 +196,11 @@ class RobotnikBaseHwSim:
     	# topic_name, msg type, callback, queue_size
     	# self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
     	# Service Servers
-    	self.set_digitalservice_server = rospy.Service('~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
+    	# Service Servers
+        self.set_digitalservice_server = rospy.Service(
+            '~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
+        self.charge_battery_service_server = rospy.Service(
+            '~charge_battery', Trigger, self.chargeBatteryServiceCb)
     	# Service Clients
     	# self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
     	# ret = self.service_client.call(ServiceMsg)
@@ -318,14 +332,11 @@ class RobotnikBaseHwSim:
     	'''
     		Publish topics at standard frequency
     	'''
-    	self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._battery_voltage
-    	if self._io.digital_outputs[self._charge_digital_output_number - 1] is True: # charging
-    		self._io.analog_inputs[self._current_analog_input_number - 1] = -self._power_consumption
-    	else:
-    		self._io.analog_inputs[self._current_analog_input_number - 1] = self._power_consumption
-    	self._io_publisher.publish(self._io)
+    	self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._current_battery_voltage
+        self._io.analog_inputs[self._current_analog_input_number - 1] = self._current_power_consumption
+        self._io_publisher.publish(self._io)
     	self._motor_status_publisher.publish(self._motor_status)
-    	self._voltage_publisher.publish(self._battery_voltage)
+    	self._voltage_publisher.publish(self._current_battery_voltage)
     	self._emergency_stop_publisher.publish(self._emergency_stop)
 
     	return 0
@@ -470,7 +481,7 @@ class RobotnikBaseHwSim:
 
         self._current_battery_voltage = self._battery_voltage[current_battery_voltage_index][0]
 
-        rospy.loginfo_throttle(5, '%s::updateBattery: battery_amperes = %lf, percentage = %lf, voltage = %.3lf' % (
+        rospy.loginfo_throttle(30, '%s::updateBattery: battery_amperes = %lf, percentage = %lf, voltage = %.3lf' % (
             self.node_name, self._current_battery_amperes, current_battery_percentage, self._current_battery_voltage))
 
         return
