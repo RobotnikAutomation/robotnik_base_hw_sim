@@ -135,11 +135,10 @@ class RobotnikBaseHwSim:
 
 		self._motor_status = RobotnikMotorsStatus()
 		for i in self._motors:
-			print 'motor %s'%i
-			self._motor_status.name.append(self._motors[i]['joint'])
-			self._motor_status.can_id.append(self._motors[i]['can_id'])
 			ms = MotorStatus()
 			ms.state = "READY"
+			ms.joint = self._motors[i]['joint']
+			ms.can_id = self._motors[i]['can_id']
 			ms.status = "OPERATION_ENABLED"
 			ms.communicationstatus = "OPERATIONAL"
 			ms.statusword = "1110110001100000"
@@ -147,7 +146,9 @@ class RobotnikBaseHwSim:
 			ms.activestatusword = ['SW_READY_TO_SWITCH_ON', 'SW_SWITCHED_ON', 'SW_OP_ENABLED', 'SW_VOLTAGE_ENABLED', 'SW_QUICK_STOP',
 		  	'UNKNOWN', 'SW_TARGET_REACHED']
 			ms.activedriveflags = ['BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
-
+			ms.digitaloutputs = [False for i in range(self._num_inputs_per_driver)]
+			ms.digitalinputs = [False for i in range(self._num_outputs_per_driver)]
+			ms.analoginputs = [False for i in range(self._num_analog_inputs_per_driver)]
 			self._motor_status.motor_status.append(ms)
 
 
