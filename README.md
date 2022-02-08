@@ -2,9 +2,9 @@
 
 This package is intended to simulate the Robotnik base hw common in most of the platforms
 
-## robotnik_base_hw_sim_node
+## 1. robotnik_base_hw_sim_node
 
-### Bringup
+### 1.1 Bringup
 
 Run the following launch inside the desired namespace.
 
@@ -15,7 +15,7 @@ Run the following launch inside the desired namespace.
 
 For RB2:
 ```
-roslaunch robotnik_base_hw_sim rb2_hw_sim.launch prefix:=rb2_a config_yaml:=rb2 
+roslaunch robotnik_base_hw_sim rb2_hw_sim.launch prefix:=rb2_a config_yaml:=rb2
 ```
 
 For SummitXLS
@@ -23,7 +23,7 @@ For SummitXLS
 roslaunch robotnik_base_hw_sim summit_xl_hw_sim.launch prefix:=summit_xl_a config_yaml:=summit_xls
 ```
 
-## robotnik_elevator_controller plugin
+## 2. robotnik_elevator_controller plugin
 
 Plugin to simulate the Elevator interface available in some robots.
 
@@ -53,7 +53,7 @@ Example of control configuration:
       elevation_offset_z: 0.07  
 ```
 
-## elevator_fake_pickup_gazebo node
+## 3. elevator_fake_pickup_gazebo node
 
 ROS node to perform pick and place of object avoiding the physics. It uses the available gazebo ROS topics and services.
 It is intended to pick & place carts/trolleys with a mobile base.
@@ -64,7 +64,7 @@ The way it works:
 2. Sets the position of the object in the same one than the robot. This is done continuosly.
 3. Place: sets the gravity of the picked object and stops setting the position of the robot
 
-### bringup
+### 3.1 bringup
 
 ```
 roslaunch robotnik_base_hw_sim elevator_fake_pickup_gazebo.launch
@@ -74,7 +74,7 @@ roslaunch robotnik_base_hw_sim elevator_fake_pickup_gazebo.launch
  * config_yaml: path to the yaml containing the configuration
 
 
-### params
+### 3.2 params
 
 *YAML Example:*
    ```
@@ -87,10 +87,10 @@ roslaunch robotnik_base_hw_sim elevator_fake_pickup_gazebo.launch
    default_link: link_0
 
 robots:
-- 
+-
    model: rb2_a
    default_link: rb2_a_base_footprint
-- 
+-
    model: rb2_b
    default_link: rb2_b_base_footprint
 
@@ -98,8 +98,8 @@ config:
   # min distance for the simple pick
   min_picking_distance: 0.1
    ```
-### topics
-#### publishers
+### 3.3 topics
+#### 3.3.1 publishers
 
  * gazebo_picking_links [gazebo_msgs/LinkStates]
    * gazebo links of the available objects to pick, based on configuration
@@ -114,20 +114,20 @@ config:
  * state [robotnik_msgs/State]
    * Component state machine
 
-#### subscribers
+#### 3.3.2 subscribers
 
  * /gazebo/link_states [gazebo_msgs/LinkStates]
-   * state of all the links of Gazebo 
+   * state of all the links of Gazebo
  * /gazebo/model_states [gazebo_msgs/ModelStates]
    * state of all the models of Gazebo
 
-### services
-#### clients
+### 3.4 services
+#### 3.4.1 clients
  * /gazebo/get_link_properties [gazebo_msgs/GetLinkProperties]
  * /gazebo/set_link_properties [gazebo_msgs/SetLinkProperties]
  * /gazebo/set_link_state [gazebo_msgs/SetLinkState]
 
-#### servers
+#### 3.4.2 servers
  * pick [robotnik_base_hw_sim/Pick]
    * Pick an object and link it to a robot
    * Example:
@@ -139,7 +139,7 @@ robot_model: 'rb2_a'
 robot_link: 'rb2_a_base_footprint'
 pose:
   position: {x: 0.0, y: 0.0, z: 0.2}
-  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}" 
+  orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}"
 success: True
 msg: "OK"
 ```
@@ -150,7 +150,7 @@ msg: "OK"
 
 ```
 rosservice call /elevator_fake_pickup_gazebo/place "object_model: 'rb2cart'
-robot_model: 'rb2_a'" 
+robot_model: 'rb2_a'"
 ```
 * simple_pick [robotnik_base_hw_sim/SimplePick]
    * Pick the closest object to a robot (within a min distance)
@@ -167,7 +167,7 @@ pose:
     x: 0.0
     y: 0.0
     z: 0.0
-    w: 0.0" 
+    w: 0.0"
 success: True
 msg: "OK"
 ```
@@ -176,7 +176,7 @@ msg: "OK"
    * Example:
 
 ```
-rosservice call /elevator_fake_pickup_gazebo/simple_place "robot_model: 'rb2_a'" 
+rosservice call /elevator_fake_pickup_gazebo/simple_place "robot_model: 'rb2_a'"
 success: True
 msg: "OK"
 ```
