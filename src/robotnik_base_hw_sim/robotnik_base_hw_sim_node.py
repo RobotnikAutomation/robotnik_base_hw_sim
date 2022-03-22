@@ -52,27 +52,27 @@ class RobotnikBaseHwSim:
 
     def __init__(self, args):
 
-    	self.node_name = rospy.get_name() #.replace('/','')
-    	self.desired_freq = args['desired_freq']
-    	# Checks value of freq
-    	if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
-    		rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
-    		self.desired_freq = DEFAULT_FREQ
+        self.node_name = rospy.get_name() #.replace('/','')
+        self.desired_freq = args['desired_freq']
+        # Checks value of freq
+        if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
+            rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
+            self.desired_freq = DEFAULT_FREQ
 
 
-    	self._motors = args['motors']
+        self._motors = args['motors']
 
-    	print self._motors
+        print self._motors
 
-    	#exit()
-    	#self._joint_names = args['joint_name']
-    	#self._joint_can_ids = args['joint_can_id']
+        #exit()
+        #self._joint_names = args['joint_name']
+        #self._joint_can_ids = args['joint_can_id']
 
-    	if self._motors == None or len(self._motors) == 0:
-    		rospy.logerr('%s::init: no motors defined'%(self.node_name))
-    		exit()
+        if self._motors == None or len(self._motors) == 0:
+            rospy.logerr('%s::init: no motors defined'%(self.node_name))
+            exit()
 
-    	self._battery_voltage = args['battery_voltage']
+        self._battery_voltage = args['battery_voltage']
         if len(self._battery_voltage) == 0:
             raise('battery_voltage argument has to be set')
         self._current_battery_voltage = self._battery_voltage[0][0]
@@ -96,250 +96,250 @@ class RobotnikBaseHwSim:
         self._current_analog_input_number = args['current_analog_input_number']
         self._charge_digital_output_number = args['charge_digital_output_number']
 
-    	self.real_freq = 1.0
+        self.real_freq = 1.0
 
-    	# Saves the state of the component
-    	self.state = State.INIT_STATE
-    	# Saves the previous state
-    	self.previous_state = State.INIT_STATE
-    	# flag to control the initialization of the component
-    	self.initialized = False
-    	# flag to control the initialization of ROS stuff
-    	self.ros_initialized = False
-    	# flag to control that the control loop is running
-    	self.running = False
-    	# Variable used to control the loop frequency
-    	self.time_sleep = 1.0 / self.desired_freq
-    	# State msg to publish
-    	self.msg_state = State()
-    	# Timer to publish state
-    	self.publish_state_timer = 1
-
-
-    	self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
-
-    	self._io = inputs_outputs()
-
-    	for i in range(len(self._motors)*self._num_inputs_per_driver):
-    		self._io.digital_inputs.append(False)
-    	for i in range(len(self._motors)*self._num_outputs_per_driver):
-    		self._io.digital_outputs.append(False)
-    	for i in range(len(self._motors)*self._num_analog_inputs_per_driver):
-    		self._io.analog_inputs.append(0.0)
-    	for i in range(len(self._motors)*self._num_analog_outputs_per_driver):
-    		self._io.analog_outputs.append(0.0)
-
-    	if len(self._k_analog_inputs_multipliers) != len(self._io.analog_inputs):
-    		rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
-    		self._k_analog_inputs_multipliers = [1] * len(self._io.analog_inputs)
-
-    	if self._voltage_analog_input_number <= 0 or self._voltage_analog_input_number > len(self._io.analog_inputs):
-    		rospy.logerr('%s::__init__: voltage_analog_input_number (%d) out of range [1, %d].',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
-    		sys.exit()
-
-    	if self._current_analog_input_number <= 0 or self._current_analog_input_number > len(self._io.analog_inputs):
-    		rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
-    		sys.exit()
-
-    	if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
-    		rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].',self.node_name, self._charge_digital_output_number, len(self._io.digital_outputs))
-    		sys.exit()
-
-    	self._motor_status = RobotnikMotorsStatus()
-    	for i in self._motors:
-    		ms = MotorStatus()
-    		ms.state = "READY"
-    		ms.joint = self._motors[i]['joint']
-    		ms.can_id = self._motors[i]['can_id']
-    		ms.status = "OPERATION_ENABLED"
-    		ms.communicationstatus = "OPERATIONAL"
-    		ms.statusword = "1110110001100000"
-    		ms.driveflags = "10000000000000000000000000000000000010000110000000000000000000000000"
-    		ms.activestatusword = ['SW_READY_TO_SWITCH_ON', 'SW_SWITCHED_ON', 'SW_OP_ENABLED', 'SW_VOLTAGE_ENABLED', 'SW_QUICK_STOP',
-    	  	'UNKNOWN', 'SW_TARGET_REACHED']
-    		ms.activedriveflags = ['BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
-    		ms.digitaloutputs = [False for i in range(self._num_inputs_per_driver)]
-    		ms.digitalinputs = [False for i in range(self._num_outputs_per_driver)]
-    		ms.analoginputs = [0.0 for i in range(self._num_analog_inputs_per_driver)]
-    		self._motor_status.motor_status.append(ms)
+        # Saves the state of the component
+        self.state = State.INIT_STATE
+        # Saves the previous state
+        self.previous_state = State.INIT_STATE
+        # flag to control the initialization of the component
+        self.initialized = False
+        # flag to control the initialization of ROS stuff
+        self.ros_initialized = False
+        # flag to control that the control loop is running
+        self.running = False
+        # Variable used to control the loop frequency
+        self.time_sleep = 1.0 / self.desired_freq
+        # State msg to publish
+        self.msg_state = State()
+        # Timer to publish state
+        self.publish_state_timer = 1
 
 
-    	self._battery_alarm = False
-    	self._emergency_stop = False
+        self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
+
+        self._io = inputs_outputs()
+
+        for i in range(len(self._motors)*self._num_inputs_per_driver):
+            self._io.digital_inputs.append(False)
+        for i in range(len(self._motors)*self._num_outputs_per_driver):
+            self._io.digital_outputs.append(False)
+        for i in range(len(self._motors)*self._num_analog_inputs_per_driver):
+            self._io.analog_inputs.append(0.0)
+        for i in range(len(self._motors)*self._num_analog_outputs_per_driver):
+            self._io.analog_outputs.append(0.0)
+
+        if len(self._k_analog_inputs_multipliers) != len(self._io.analog_inputs):
+            rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
+            self._k_analog_inputs_multipliers = [1] * len(self._io.analog_inputs)
+
+        if self._voltage_analog_input_number <= 0 or self._voltage_analog_input_number > len(self._io.analog_inputs):
+            rospy.logerr('%s::__init__: voltage_analog_input_number (%d) out of range [1, %d].',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
+            sys.exit()
+
+        if self._current_analog_input_number <= 0 or self._current_analog_input_number > len(self._io.analog_inputs):
+            rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
+            sys.exit()
+
+        if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
+            rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].',self.node_name, self._charge_digital_output_number, len(self._io.digital_outputs))
+            sys.exit()
+
+        self._motor_status = RobotnikMotorsStatus()
+        for i in self._motors:
+            ms = MotorStatus()
+            ms.state = "READY"
+            ms.joint = self._motors[i]['joint']
+            ms.can_id = self._motors[i]['can_id']
+            ms.status = "OPERATION_ENABLED"
+            ms.communicationstatus = "OPERATIONAL"
+            ms.statusword = "1110110001100000"
+            ms.driveflags = "10000000000000000000000000000000000010000110000000000000000000000000"
+            ms.activestatusword = ['SW_READY_TO_SWITCH_ON', 'SW_SWITCHED_ON', 'SW_OP_ENABLED', 'SW_VOLTAGE_ENABLED', 'SW_QUICK_STOP',
+              'UNKNOWN', 'SW_TARGET_REACHED']
+            ms.activedriveflags = ['BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
+            ms.digitaloutputs = [False for i in range(self._num_inputs_per_driver)]
+            ms.digitalinputs = [False for i in range(self._num_outputs_per_driver)]
+            ms.analoginputs = [0.0 for i in range(self._num_analog_inputs_per_driver)]
+            self._motor_status.motor_status.append(ms)
+
+
+        self._battery_alarm = False
+        self._emergency_stop = False
 
 
     def setup(self):
-    	'''
-    		Initializes de hand
-    		@return: True if OK, False otherwise
-    	'''
-    	self.initialized = True
+        '''
+            Initializes de hand
+            @return: True if OK, False otherwise
+        '''
+        self.initialized = True
 
-    	return 0
+        return 0
 
 
     def rosSetup(self):
-    	'''
-    		Creates and inits ROS components
-    	'''
-    	if self.ros_initialized:
-    		return 0
+        '''
+            Creates and inits ROS components
+        '''
+        if self.ros_initialized:
+            return 0
 
-    	# Publishers
-    	self._state_publisher = rospy.Publisher('~state', State, queue_size=10)
-    	self._io_publisher = rospy.Publisher('~io', inputs_outputs, queue_size=10)
-    	self._motor_status_publisher = rospy.Publisher('~status', RobotnikMotorsStatus, queue_size=10)
-    	self._voltage_publisher = rospy.Publisher('~voltage', Float32, queue_size=10)
-    	self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
-    	self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
-    	# Subscribers
-    	# topic_name, msg type, callback, queue_size
-    	# self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
-    	# Service Servers
-    	# Service Servers
+        # Publishers
+        self._state_publisher = rospy.Publisher('~state', State, queue_size=10)
+        self._io_publisher = rospy.Publisher('~io', inputs_outputs, queue_size=10)
+        self._motor_status_publisher = rospy.Publisher('~status', RobotnikMotorsStatus, queue_size=10)
+        self._voltage_publisher = rospy.Publisher('~voltage', Float32, queue_size=10)
+        self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
+        self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
+        # Subscribers
+        # topic_name, msg type, callback, queue_size
+        # self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
+        # Service Servers
+        # Service Servers
         self.set_digitalservice_server = rospy.Service(
             '~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
         self.charge_battery_service_server = rospy.Service(
             '~charge_battery', Trigger, self.chargeBatteryServiceCb)
-    	# Service Clients
-    	# self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
-    	# ret = self.service_client.call(ServiceMsg)
+        # Service Clients
+        # self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
+        # ret = self.service_client.call(ServiceMsg)
 
-    	self.ros_initialized = True
+        self.ros_initialized = True
 
-    	self.publishROSstate()
+        self.publishROSstate()
 
-    	return 0
+        return 0
 
 
     def shutdown(self):
-    	'''
-    		Shutdowns device
-    		@return: 0 if it's performed successfully, -1 if there's any problem or the component is running
-    	'''
-    	if self.running or not self.initialized:
-    		return -1
-    	rospy.loginfo('%s::shutdown'%self.node_name)
+        '''
+            Shutdowns device
+            @return: 0 if it's performed successfully, -1 if there's any problem or the component is running
+        '''
+        if self.running or not self.initialized:
+            return -1
+        rospy.loginfo('%s::shutdown'%self.node_name)
 
-    	# Cancels current timers
-    	self.t_publish_state.cancel()
+        # Cancels current timers
+        self.t_publish_state.cancel()
 
-    	self._state_publisher.unregister()
+        self._state_publisher.unregister()
 
-    	self.initialized = False
+        self.initialized = False
 
-    	return 0
+        return 0
 
 
     def rosShutdown(self):
-    	'''
-    		Shutdows all ROS components
-    		@return: 0 if it's performed successfully, -1 if there's any problem or the component is running
-    	'''
-    	if self.running or not self.ros_initialized:
-    		return -1
+        '''
+            Shutdows all ROS components
+            @return: 0 if it's performed successfully, -1 if there's any problem or the component is running
+        '''
+        if self.running or not self.ros_initialized:
+            return -1
 
-    	# Performs ROS topics & services shutdown
-    	self._state_publisher.unregister()
+        # Performs ROS topics & services shutdown
+        self._state_publisher.unregister()
 
-    	self.ros_initialized = False
+        self.ros_initialized = False
 
-    	return 0
+        return 0
 
 
     def stop(self):
-    	'''
-    		Creates and inits ROS components
-    	'''
-    	self.running = False
+        '''
+            Creates and inits ROS components
+        '''
+        self.running = False
 
-    	return 0
+        return 0
 
 
     def start(self):
-    	'''
-    		Runs ROS configuration and the main control loop
-    		@return: 0 if OK
-    	'''
-    	self.rosSetup()
+        '''
+            Runs ROS configuration and the main control loop
+            @return: 0 if OK
+        '''
+        self.rosSetup()
 
-    	if self.running:
-    		return 0
+        if self.running:
+            return 0
 
-    	self.running = True
+        self.running = True
 
-    	self.controlLoop()
+        self.controlLoop()
 
-    	return 0
+        return 0
 
 
     def controlLoop(self):
-    	'''
-    		Main loop of the component
-    		Manages actions by state
-    	'''
+        '''
+            Main loop of the component
+            Manages actions by state
+        '''
 
-    	while self.running and not rospy.is_shutdown():
-    		t1 = time.time()
+        while self.running and not rospy.is_shutdown():
+            t1 = time.time()
 
-    		if self.state == State.INIT_STATE:
-    			self.initState()
+            if self.state == State.INIT_STATE:
+                self.initState()
 
-    		elif self.state == State.STANDBY_STATE:
-    			self.standbyState()
+            elif self.state == State.STANDBY_STATE:
+                self.standbyState()
 
-    		elif self.state == State.READY_STATE:
-    			self.readyState()
+            elif self.state == State.READY_STATE:
+                self.readyState()
 
-    		elif self.state == State.EMERGENCY_STATE:
-    			self.emergencyState()
+            elif self.state == State.EMERGENCY_STATE:
+                self.emergencyState()
 
-    		elif self.state == State.FAILURE_STATE:
-    			self.failureState()
+            elif self.state == State.FAILURE_STATE:
+                self.failureState()
 
-    		elif self.state == State.SHUTDOWN_STATE:
-    			self.shutdownState()
+            elif self.state == State.SHUTDOWN_STATE:
+                self.shutdownState()
 
-    		self.allState()
+            self.allState()
 
-    		t2 = time.time()
-    		tdiff = (t2 - t1)
+            t2 = time.time()
+            tdiff = (t2 - t1)
 
 
-    		t_sleep = self.time_sleep - tdiff
+            t_sleep = self.time_sleep - tdiff
 
-    		if t_sleep > 0.0:
-    			try:
-    				rospy.sleep(t_sleep)
-    			except rospy.exceptions.ROSInterruptException:
-    				rospy.loginfo('%s::controlLoop: ROS interrupt exception'%self.node_name)
-    				self.running = False
+            if t_sleep > 0.0:
+                try:
+                    rospy.sleep(t_sleep)
+                except rospy.exceptions.ROSInterruptException:
+                    rospy.loginfo('%s::controlLoop: ROS interrupt exception'%self.node_name)
+                    self.running = False
 
-    		t3= time.time()
-    		self.real_freq = 1.0/(t3 - t1)
+            t3= time.time()
+            self.real_freq = 1.0/(t3 - t1)
 
-    	self.running = False
-    	# Performs component shutdown
-    	self.shutdownState()
-    	# Performs ROS shutdown
-    	self.rosShutdown()
-    	rospy.loginfo('%s::controlLoop: exit control loop'%self.node_name)
+        self.running = False
+        # Performs component shutdown
+        self.shutdownState()
+        # Performs ROS shutdown
+        self.rosShutdown()
+        rospy.loginfo('%s::controlLoop: exit control loop'%self.node_name)
 
-    	return 0
+        return 0
 
 
     def rosPublish(self):
-    	'''
-    		Publish topics at standard frequency
-    	'''
-    	self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._current_battery_voltage
+        '''
+            Publish topics at standard frequency
+        '''
+        self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._current_battery_voltage
         self._io.analog_inputs[self._current_analog_input_number - 1] = self._current_power_consumption
         self._io_publisher.publish(self._io)
-    	self._motor_status_publisher.publish(self._motor_status)
-    	self._voltage_publisher.publish(self._current_battery_voltage)
-    	self._emergency_stop_publisher.publish(self._emergency_stop)
+        self._motor_status_publisher.publish(self._motor_status)
+        self._voltage_publisher.publish(self._current_battery_voltage)
+        self._emergency_stop_publisher.publish(self._emergency_stop)
 
-    	return 0
+        return 0
 
 
     def initState(self):
@@ -523,13 +523,13 @@ class RobotnikBaseHwSim:
 
     """
     def topicCb(self, msg):
-    	'''
-    		Callback for inelfe_video_manager state
-    		@param msg: received message
-    		@type msg: std_msgs/Int32
-    	'''
-    	# DEMO
-    	rospy.loginfo('RobotnikBaseHwSim:topicCb')
+        '''
+            Callback for inelfe_video_manager state
+            @param msg: received message
+            @type msg: std_msgs/Int32
+        '''
+        # DEMO
+        rospy.loginfo('RobotnikBaseHwSim:topicCb')
 
 
 
