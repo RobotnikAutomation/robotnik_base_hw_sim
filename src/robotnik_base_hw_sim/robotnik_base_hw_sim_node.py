@@ -62,7 +62,7 @@ class RobotnikBaseHwSim:
 
         self._motors = args['motors']
 
-        print self._motors
+        print(self._motors)
 
         #exit()
         #self._joint_names = args['joint_name']
@@ -571,7 +571,7 @@ def main():
             else:
                 args[name] = arg_defaults[name]
             # print name
-        except rospy.ROSException, e:
+        except rospy.ROSException as e:
             rospy.logerr('%s: %s' % (e, _name))
 
     rc_node = RobotnikBaseHwSim(args)
