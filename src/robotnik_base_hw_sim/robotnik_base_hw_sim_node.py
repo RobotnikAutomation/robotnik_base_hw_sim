@@ -94,6 +94,8 @@ class RobotnikBaseHwSim:
         self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
         self._voltage_analog_input_number = args['voltage_analog_input_number']
         self._current_analog_input_number = args['current_analog_input_number']
+        self._contact_relay_digital_input_number = args['contact_relay_digital_input_number']
+        self._inverted_contact_relay = args['inverted_contact_relay']
         self._charge_digital_output_number = args['charge_digital_output_number']
 
         self.real_freq = 1.0
@@ -140,6 +142,12 @@ class RobotnikBaseHwSim:
         if self._current_analog_input_number <= 0 or self._current_analog_input_number > len(self._io.analog_inputs):
             rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
             sys.exit()
+
+        if self._contact_relay_digital_input_number <= 0 or self._contact_relay_digital_input_number > len(self._io.digital_outputs):
+            rospy.logerr('%s::__init__: contact_relay_digital_input_number (%d) out of range [1, %d].',self.node_name, self._contact_relay_digital_input_number, len(self._io.digital_outputs))
+            sys.exit()
+        
+        self._contact_relay_status = not self._inverted_contact_relay
 
         if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
             rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].',self.node_name, self._charge_digital_output_number, len(self._io.digital_outputs))
@@ -334,6 +342,7 @@ class RobotnikBaseHwSim:
         '''
         self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._current_battery_voltage
         self._io.analog_inputs[self._current_analog_input_number - 1] = self._current_power_consumption
+        self._io.digital_inputs[self._contact_relay_digital_input_number - 1] = self._contact_relay_status
         self._io_publisher.publish(self._io)
         self._motor_status_publisher.publish(self._motor_status)
         self._voltage_publisher.publish(self._current_battery_voltage)
@@ -369,8 +378,11 @@ class RobotnikBaseHwSim:
         '''
         if self._io.digital_outputs[self._charge_digital_output_number - 1] is True:  # charging
             self._current_power_consumption = -1.0 * self._power_charge
+            self._contact_relay_status = not self._inverted_contact_relay
         else:
             self._current_power_consumption = self._power_consumption
+            self._contact_relay_status = self._inverted_contact_relay
+
 
         self.updateBattery()
 
@@ -558,6 +570,8 @@ def main():
         'k_analog_inputs_multipliers': [],
         'voltage_analog_input_number': 1,
         'current_analog_input_number': 2,
+        'contact_relay_digital_input_number': 2,
+        'inverted_contact_relay': True,
         'charge_digital_output_number': 1,
     }
 

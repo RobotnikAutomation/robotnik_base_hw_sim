@@ -30,5 +30,7 @@ num_analog_inputs_per_driver: 1
 k_analog_inputs_multipliers: [6.978947368, -12.5]
 voltage_analog_input_number: 1
 current_analog_input_number: 2
+inverted_contact_relay: true
+contact_relay_digital_input_number: 2
 # if this output is active it will put the robot as charging
 charge_digital_output_number: 4
