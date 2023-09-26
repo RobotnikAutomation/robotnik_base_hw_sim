@@ -154,6 +154,7 @@ class RobotnikBaseHwSim:
             sys.exit()
 
         self._motor_status = RobotnikMotorsStatus()
+        self._motor_status.state = "READY"
         for i in self._motors:
             ms = MotorStatus()
             ms.state = "READY"
