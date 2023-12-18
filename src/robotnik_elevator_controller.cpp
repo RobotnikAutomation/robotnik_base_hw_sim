@@ -47,7 +47,7 @@ RobotnikElevatorController::RobotnikElevatorController()
 }
 
 
-bool RobotnikElevatorController::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle& root_nh,
+bool RobotnikElevatorController::init(hardware_interface::PositionJointInterface* hw, ros::NodeHandle& root_nh,
                              ros::NodeHandle&	 controller_nh)
 {
   
@@ -262,7 +262,7 @@ std::string RobotnikElevatorController::getHardwareInterfaceType() const
 {
   // as result of being a Controller which uses different types of JointInterface, return the main interface type
   // in this case, it is a VelocityJointInterface
-  return hardware_interface::internal::demangledTypeName<hardware_interface::EffortJointInterface>();
+  return hardware_interface::internal::demangledTypeName<hardware_interface::PositionJointInterface>();
 }
 
 /**
