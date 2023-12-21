@@ -97,6 +97,8 @@ class RobotnikBaseHwSim:
         self._contact_relay_digital_input_number = args['contact_relay_digital_input_number']
         self._inverted_contact_relay = args['inverted_contact_relay']
         self._charge_digital_output_number = args['charge_digital_output_number']
+        self._publish_battery_estimation = args['publish_battery_estimation']
+        self._publish_charge_manager = args['publish_charge_manager']
 
         self.real_freq = 1.0
 
@@ -153,6 +155,9 @@ class RobotnikBaseHwSim:
             sys.exit()
 
         self._contact_relay_status = not self._inverted_contact_relay
+        self._last_contact_relay_status = not self._inverted_contact_relay
+        self._contact_relay_status_changed_time = rospy.Time(0)
+        self._time_to_start_charging = rospy.Duration(5.0)
 
         if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
             rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].', self.node_name, self._charge_digital_output_number, len(
@@ -182,10 +187,8 @@ class RobotnikBaseHwSim:
                 self._num_analog_inputs_per_driver)]
             self._motor_status.motor_status.append(ms)
 
-
         self._battery_alarm = False
         self._emergency_stop = False
-
 
     def setup(self):
         '''
@@ -195,7 +198,6 @@ class RobotnikBaseHwSim:
         self.initialized = True
 
         return 0
-
 
     def rosSetup(self):
         '''
@@ -217,6 +219,12 @@ class RobotnikBaseHwSim:
         self._toogle_robot_operation_service_server = rospy.Service(
             'robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
         # Publish the battery status
+        if self._publish_battery_estimation == True:
+            self._battery_status_publisher = rospy.Publisher(
+                'battery_estimator/data', BatteryStatus, queue_size=10)
+            self._battery_status_stamped_publisher = rospy.Publisher(
+                'battery_estimator/data_stamped', BatteryStatusStamped, queue_size=10)
+
         # Subscribers
         # topic_name, msg type, callback, queue_size
         # self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
@@ -236,7 +244,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def shutdown(self):
         '''
             Shutdowns device
@@ -255,7 +262,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def rosShutdown(self):
         '''
             Shutdows all ROS components
@@ -271,7 +277,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def stop(self):
         '''
             Creates and inits ROS components
@@ -279,7 +284,6 @@ class RobotnikBaseHwSim:
         self.running = False
 
         return 0
-
 
     def start(self):
         '''
@@ -296,7 +300,6 @@ class RobotnikBaseHwSim:
         self.controlLoop()
 
         return 0
-
 
     def controlLoop(self):
         '''
@@ -330,7 +333,6 @@ class RobotnikBaseHwSim:
             t2 = time.time()
             tdiff = (t2 - t1)
 
-
             t_sleep = self.time_sleep - tdiff
 
             if t_sleep > 0.0:
@@ -353,7 +355,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def rosPublish(self):
         '''
             Publish topics at standard frequency
@@ -369,8 +370,23 @@ class RobotnikBaseHwSim:
         self._voltage_publisher.publish(self._current_battery_voltage)
         self._emergency_stop_publisher.publish(self._emergency_stop)
 
-        return 0
+        if self._publish_battery_estimation == True:
+            battery_status = BatteryStatus()
+            battery_status.voltage = self._current_battery_voltage
+            battery_status.level = 100 * \
+                (self._current_battery_amperes / self._battery_amperes)
+            battery_status.current = self._current_power_consumption
+            if self._current_power_consumption < 0.0:
+                battery_status.is_charging = True
+            battery_status_stamped = BatteryStatusStamped()
+            battery_status_stamped.header.stamp = rospy.Time.now()
+            battery_status_stamped.status = battery_status
 
+            self._battery_status_publisher.publish(battery_status)
+            self._battery_status_stamped_publisher.publish(
+                battery_status_stamped)
+
+        return 0
 
     def initState(self):
         '''
@@ -398,12 +414,19 @@ class RobotnikBaseHwSim:
                 Actions performed in ready state
         '''
         if self._io.digital_outputs[self._charge_digital_output_number - 1] is True:  # charging
-            self._current_power_consumption = -1.0 * self._power_charge
             self._contact_relay_status = not self._inverted_contact_relay
         else:
-            self._current_power_consumption = self._power_consumption
             self._contact_relay_status = self._inverted_contact_relay
 
+        if self._contact_relay_status != self._last_contact_relay_status:
+            self._contact_relay_status_changed_time = rospy.Time.now()
+            self._last_contact_relay_status = self._contact_relay_status
+
+        # To simulate the battery charge when the contact relay is closed we need to wait a few seconds
+        if self._contact_relay_status == True and rospy.Time.now() - self._contact_relay_status_changed_time > self._time_to_start_charging:
+            self._current_power_consumption = -1.0 * self._power_charge
+        else:
+            self._current_power_consumption = self._power_consumption
 
         self.updateBattery()
 
@@ -601,6 +624,8 @@ def main():
         'contact_relay_digital_input_number': 2,
         'inverted_contact_relay': True,
         'charge_digital_output_number': 1,
+        'publish_battery_estimation': True,
+        'publish_charge_manager': True
     }
 
     args = {}
