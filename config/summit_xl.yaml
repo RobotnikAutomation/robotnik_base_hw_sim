@@ -1,15 +1,15 @@
 motors:
   m1:
-    joint: robot_back_left_joint
+    joint: $(arg prefix)front_left_wheel_joint
     can_id: 1
   m2:
-    joint: robot_back_right_joint
+    joint: $(arg prefix)back_left_wheel_joint
     can_id: 2
   m3:
-    joint: robot_front_left_joint
+    joint: $(arg prefix)front_right_wheel_joint
     can_id: 3
   m4:
-    joint: robot_front_right_joint
+    joint: $(arg prefix)back_right_wheel_joint
     can_id: 4
 battery_voltage:
   - [54.18, 100]
