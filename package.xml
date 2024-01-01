@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>robotnik_base_hw_sim</name>
-  <version>2.1.0</version>
+  <version>2.2.0</version>
   <description>The robotnik_base_hw_sim package</description>
 
   <maintainer email="rnavarro@robotnik.es">rnavarro</maintainer>
