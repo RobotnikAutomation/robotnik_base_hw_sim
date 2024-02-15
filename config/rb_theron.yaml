@@ -19,8 +19,8 @@ battery_voltage:
   - [45.75, 0]
 battery_amperes: 15
 battery_alarm_voltage: 48.5
-num_inputs_per_driver: 5
-num_outputs_per_driver: 3
+num_inputs_per_driver: 4
+num_outputs_per_driver: 4
 # A/h (to simulate battery discharge)
 power_consumption: 3
 # A/h to simulate the battery charge
