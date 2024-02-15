@@ -234,6 +234,8 @@ class RobotnikBaseHwSim:
             '~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
         self.charge_battery_service_server = rospy.Service(
             '~charge_battery', Trigger, self.chargeBatteryServiceCb)
+        self.set_digital_input_service_server = rospy.Service(
+            '~set_digital_input', set_digital_output, self.setDigitalInputputServiceCb)
         # Service Clients
         # self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
         # ret = self.service_client.call(ServiceMsg)
@@ -572,6 +574,23 @@ class RobotnikBaseHwSim:
         rospy.loginfo('%s::setDigitalOutputServiceCb: setting output %d to %d',
                       self.node_name, req.output, req.value)
         self._io.digital_outputs[req.output - 1] = req.value
+
+        return True
+
+    def setDigitalInputputServiceCb(self, req):
+        '''
+                ROS service server to set the hw digital inputs
+                @param req: Required action
+                @type req: robotnik_msgs/set_digital_output
+        '''
+        if (req.output <= 0 or req.output > len(self._io.digital_inputs)):
+            rospy.loginfo(
+                '%s::setDigitalInputputServiceCb: output %d out of range', self.node_name, req.output)
+            return False
+
+        rospy.loginfo('%s::setDigitalInputputServiceCb: setting inpu %d to %d',
+                      self.node_name, req.output, req.value)
+        self._io.digital_inputs[req.output - 1] = req.value
 
         return True
 
