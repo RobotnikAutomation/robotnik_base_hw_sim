@@ -1,9 +1,9 @@
 motors:
   m1:
-    joint: robot_left_joint
+    joint: $(arg prefix)left_wheel_joint
     can_id: 1
   m2:
-    joint: robot_right_joint
+    joint: $(arg prefix)right_wheel_joint
     can_id: 2
 battery_voltage:
   - [54.18, 100]
@@ -30,6 +30,6 @@ num_analog_inputs_per_driver: 1
 k_analog_inputs_multipliers: [6.978947368, -12.5]
 voltage_analog_input_number: 1
 current_analog_input_number: 2
-inverted_contact_relay: true
+inverted_contact_relay: false
 contact_relay_digital_input_number: 2
 charge_digital_output_number: 1

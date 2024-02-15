@@ -10,17 +10,19 @@ Run the following launch inside the desired namespace.
 
 **Arguments**
 
-* prefix: prefix for the default joints (for multirobots envs)
+* robot_id: robot namespace. By default robot
+* prefix: prefix for the default joints (for multirobots envs). By default it takes the robot_id + '_'
 * config_yaml: default config yaml. Every robot should have one.
+* publish_battery_estimation: enables the publication of the battery estimation based on internal estimation. By default true.
 
-For RB2:
+For Summit XL:
 ```
-roslaunch robotnik_base_hw_sim rb2_hw_sim.launch prefix:=rb2_a config_yaml:=rb2
+roslaunch robotnik_base_hw_sim robotnik_base_hw_sim.launch robot_id:=robot config_yaml:=summit_xl
 ```
 
-For SummitXLS
+For RB-THERON
 ```
-roslaunch robotnik_base_hw_sim summit_xl_hw_sim.launch prefix:=summit_xl_a config_yaml:=summit_xls
+roslaunch robotnik_base_hw_sim robotnik_base_hw_sim.launch robot_id:=robot config_yaml:=rb_theron
 ```
 
 ## 2. robotnik_elevator_controller plugin

@@ -32,13 +32,12 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+import threading
+import time
 import rospy
 
-import time
-import threading
-import sys
-
-from robotnik_msgs.msg import State, RobotnikMotorsStatus, inputs_outputs, MotorStatus, BatteryStatus, BatteryDockingStatusStamped, BatteryDockingStatus
+from robotnik_msgs.msg import State, RobotnikMotorsStatus, inputs_outputs, MotorStatus, BatteryStatus, BatteryStatusStamped
 from std_msgs.msg import Bool, Float32
 from std_srvs.srv import Trigger
 from robotnik_msgs.srv import enable_disable, set_digital_output
@@ -49,32 +48,33 @@ MAX_FREQ = 500.0
 
 # Class Template of Robotnik component for Pyhton
 class RobotnikBaseHwSim:
+    """ Class RobotnikBaseHwSim to simulate the Robotnik's base hardware """
 
     def __init__(self, args):
 
-        self.node_name = rospy.get_name() #.replace('/','')
+        self.node_name = rospy.get_name()  # .replace('/','')
         self.desired_freq = args['desired_freq']
         # Checks value of freq
         if self.desired_freq <= 0.0 or self.desired_freq > MAX_FREQ:
-            rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f'%(self.node_name,self.desired_freq, DEFAULT_FREQ))
+            rospy.loginfo('%s::init: Desired freq (%f) is not possible. Setting desired_freq to %f' % (
+                self.node_name, self.desired_freq, DEFAULT_FREQ))
             self.desired_freq = DEFAULT_FREQ
-
 
         self._motors = args['motors']
 
         print(self._motors)
 
-        #exit()
-        #self._joint_names = args['joint_name']
-        #self._joint_can_ids = args['joint_can_id']
+        # exit()
+        # self._joint_names = args['joint_name']
+        # self._joint_can_ids = args['joint_can_id']
 
         if self._motors == None or len(self._motors) == 0:
-            rospy.logerr('%s::init: no motors defined'%(self.node_name))
+            rospy.logerr('%s::init: no motors defined' % (self.node_name))
             exit()
 
         self._battery_voltage = args['battery_voltage']
         if len(self._battery_voltage) == 0:
-            raise('battery_voltage argument has to be set')
+            raise ('battery_voltage argument has to be set')
         self._current_battery_voltage = self._battery_voltage[0][0]
         self._battery_amperes = args['battery_amperes']
         self._current_battery_amperes = self._battery_amperes
@@ -85,11 +85,11 @@ class RobotnikBaseHwSim:
         self._num_outputs_per_driver = args['num_outputs_per_driver']
         self._power_consumption = args['power_consumption']
         if self._power_consumption <= 0:
-            raise("power_consumption argument has to be > 0")
+            raise ("power_consumption argument has to be > 0")
         self._current_power_consumption = self._power_consumption
         self._power_charge = args['power_charge']
         if self._power_charge <= 0:
-            raise("power_charge argument has to be > 0")
+            raise ("power_charge argument has to be > 0")
 
         self._k_analog_inputs_multipliers = args['k_analog_inputs_multipliers']
         self._voltage_analog_input_number = args['voltage_analog_input_number']
@@ -97,6 +97,8 @@ class RobotnikBaseHwSim:
         self._contact_relay_digital_input_number = args['contact_relay_digital_input_number']
         self._inverted_contact_relay = args['inverted_contact_relay']
         self._charge_digital_output_number = args['charge_digital_output_number']
+        self._publish_battery_estimation = args['publish_battery_estimation']
+        self._publish_charge_manager = args['publish_charge_manager']
 
         self.real_freq = 1.0
 
@@ -117,8 +119,8 @@ class RobotnikBaseHwSim:
         # Timer to publish state
         self.publish_state_timer = 1
 
-
-        self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
+        self.t_publish_state = threading.Timer(
+            self.publish_state_timer, self.publishROSstate)
 
         self._io = inputs_outputs()
 
@@ -132,25 +134,34 @@ class RobotnikBaseHwSim:
             self._io.analog_outputs.append(0.0)
 
         if len(self._k_analog_inputs_multipliers) != len(self._io.analog_inputs):
-            rospy.logwarn('%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs',self.node_name)
-            self._k_analog_inputs_multipliers = [1] * len(self._io.analog_inputs)
+            rospy.logwarn(
+                '%s::__init__: len of param k_analog_inputs_multipliers is different from the len of analog inputs', self.node_name)
+            self._k_analog_inputs_multipliers = [
+                1] * len(self._io.analog_inputs)
 
         if self._voltage_analog_input_number <= 0 or self._voltage_analog_input_number > len(self._io.analog_inputs):
-            rospy.logerr('%s::__init__: voltage_analog_input_number (%d) out of range [1, %d].',self.node_name, self._voltage_analog_input_number, len(self._io.analog_inputs))
+            rospy.logerr('%s::__init__: voltage_analog_input_number (%d) out of range [1, %d].', self.node_name, self._voltage_analog_input_number, len(
+                self._io.analog_inputs))
             sys.exit()
 
         if self._current_analog_input_number <= 0 or self._current_analog_input_number > len(self._io.analog_inputs):
-            rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].',self.node_name, self._current_analog_input_number, len(self._io.analog_inputs))
+            rospy.logerr('%s::__init__: current_analog_input_number (%d) out of range [1, %d].', self.node_name, self._current_analog_input_number, len(
+                self._io.analog_inputs))
             sys.exit()
 
         if self._contact_relay_digital_input_number <= 0 or self._contact_relay_digital_input_number > len(self._io.digital_outputs):
-            rospy.logerr('%s::__init__: contact_relay_digital_input_number (%d) out of range [1, %d].',self.node_name, self._contact_relay_digital_input_number, len(self._io.digital_outputs))
+            rospy.logerr('%s::__init__: contact_relay_digital_input_number (%d) out of range [1, %d].', self.node_name, self._contact_relay_digital_input_number, len(
+                self._io.digital_outputs))
             sys.exit()
-        
+
         self._contact_relay_status = not self._inverted_contact_relay
+        self._last_contact_relay_status = not self._inverted_contact_relay
+        self._contact_relay_status_changed_time = rospy.Time(0)
+        self._time_to_start_charging = rospy.Duration(5.0)
 
         if self._charge_digital_output_number <= 0 or self._charge_digital_output_number > len(self._io.digital_outputs):
-            rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].',self.node_name, self._charge_digital_output_number, len(self._io.digital_outputs))
+            rospy.logerr('%s::__init__: charge_digital_output_number (%d) out of range [1, %d].', self.node_name, self._charge_digital_output_number, len(
+                self._io.digital_outputs))
             sys.exit()
 
         self._motor_status = RobotnikMotorsStatus()
@@ -165,17 +176,19 @@ class RobotnikBaseHwSim:
             ms.statusword = "1110110001100000"
             ms.driveflags = "10000000000000000000000000000000000010000110000000000000000000000000"
             ms.activestatusword = ['SW_READY_TO_SWITCH_ON', 'SW_SWITCHED_ON', 'SW_OP_ENABLED', 'SW_VOLTAGE_ENABLED', 'SW_QUICK_STOP',
-              'UNKNOWN', 'SW_TARGET_REACHED']
-            ms.activedriveflags = ['BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
-            ms.digitaloutputs = [False for i in range(self._num_inputs_per_driver)]
-            ms.digitalinputs = [False for i in range(self._num_outputs_per_driver)]
-            ms.analoginputs = [0.0 for i in range(self._num_analog_inputs_per_driver)]
+                                   'UNKNOWN', 'SW_TARGET_REACHED']
+            ms.activedriveflags = [
+                'BRIDGE_ENABLED', 'NONSINUSOIDAL_COMMUTATION', 'ZERO_VELOCITY', 'AT_COMMAND']
+            ms.digitaloutputs = [False for i in range(
+                self._num_inputs_per_driver)]
+            ms.digitalinputs = [False for i in range(
+                self._num_outputs_per_driver)]
+            ms.analoginputs = [0.0 for i in range(
+                self._num_analog_inputs_per_driver)]
             self._motor_status.motor_status.append(ms)
-
 
         self._battery_alarm = False
         self._emergency_stop = False
-
 
     def setup(self):
         '''
@@ -186,7 +199,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def rosSetup(self):
         '''
             Creates and inits ROS components
@@ -196,11 +208,23 @@ class RobotnikBaseHwSim:
 
         # Publishers
         self._state_publisher = rospy.Publisher('~state', State, queue_size=10)
-        self._io_publisher = rospy.Publisher('~io', inputs_outputs, queue_size=10)
-        self._motor_status_publisher = rospy.Publisher('~status', RobotnikMotorsStatus, queue_size=10)
-        self._voltage_publisher = rospy.Publisher('~voltage', Float32, queue_size=10)
-        self._emergency_stop_publisher = rospy.Publisher('~emergency_stop', Bool, queue_size=10)
-        self._toogle_robot_operation_service_server = rospy.Service('robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
+        self._io_publisher = rospy.Publisher(
+            '~io', inputs_outputs, queue_size=10)
+        self._motor_status_publisher = rospy.Publisher(
+            '~status', RobotnikMotorsStatus, queue_size=10)
+        self._voltage_publisher = rospy.Publisher(
+            '~voltage', Float32, queue_size=10)
+        self._emergency_stop_publisher = rospy.Publisher(
+            '~emergency_stop', Bool, queue_size=10)
+        self._toogle_robot_operation_service_server = rospy.Service(
+            'robotnik_base_control/enable', enable_disable, self.toogleRobotOperationserviceCb)
+        # Publish the battery status
+        if self._publish_battery_estimation == True:
+            self._battery_status_publisher = rospy.Publisher(
+                'battery_estimator/data', BatteryStatus, queue_size=10)
+            self._battery_status_stamped_publisher = rospy.Publisher(
+                'battery_estimator/data_stamped', BatteryStatusStamped, queue_size=10)
+
         # Subscribers
         # topic_name, msg type, callback, queue_size
         # self.topic_sub = rospy.Subscriber('topic_name', Int32, self.topicCb, queue_size = 10)
@@ -210,6 +234,8 @@ class RobotnikBaseHwSim:
             '~set_digital_output', set_digital_output, self.setDigitalOutputServiceCb)
         self.charge_battery_service_server = rospy.Service(
             '~charge_battery', Trigger, self.chargeBatteryServiceCb)
+        self.set_digital_input_service_server = rospy.Service(
+            '~set_digital_input', set_digital_output, self.setDigitalInputputServiceCb)
         # Service Clients
         # self.service_client = rospy.ServiceProxy('service_name', ServiceMsg)
         # ret = self.service_client.call(ServiceMsg)
@@ -220,7 +246,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def shutdown(self):
         '''
             Shutdowns device
@@ -228,7 +253,7 @@ class RobotnikBaseHwSim:
         '''
         if self.running or not self.initialized:
             return -1
-        rospy.loginfo('%s::shutdown'%self.node_name)
+        rospy.loginfo('%s::shutdown' % self.node_name)
 
         # Cancels current timers
         self.t_publish_state.cancel()
@@ -238,7 +263,6 @@ class RobotnikBaseHwSim:
         self.initialized = False
 
         return 0
-
 
     def rosShutdown(self):
         '''
@@ -255,7 +279,6 @@ class RobotnikBaseHwSim:
 
         return 0
 
-
     def stop(self):
         '''
             Creates and inits ROS components
@@ -263,7 +286,6 @@ class RobotnikBaseHwSim:
         self.running = False
 
         return 0
-
 
     def start(self):
         '''
@@ -280,7 +302,6 @@ class RobotnikBaseHwSim:
         self.controlLoop()
 
         return 0
-
 
     def controlLoop(self):
         '''
@@ -314,17 +335,17 @@ class RobotnikBaseHwSim:
             t2 = time.time()
             tdiff = (t2 - t1)
 
-
             t_sleep = self.time_sleep - tdiff
 
             if t_sleep > 0.0:
                 try:
                     rospy.sleep(t_sleep)
                 except rospy.exceptions.ROSInterruptException:
-                    rospy.loginfo('%s::controlLoop: ROS interrupt exception'%self.node_name)
+                    rospy.loginfo(
+                        '%s::controlLoop: ROS interrupt exception' % self.node_name)
                     self.running = False
 
-            t3= time.time()
+            t3 = time.time()
             self.real_freq = 1.0/(t3 - t1)
 
         self.running = False
@@ -332,25 +353,42 @@ class RobotnikBaseHwSim:
         self.shutdownState()
         # Performs ROS shutdown
         self.rosShutdown()
-        rospy.loginfo('%s::controlLoop: exit control loop'%self.node_name)
+        rospy.loginfo('%s::controlLoop: exit control loop' % self.node_name)
 
         return 0
-
 
     def rosPublish(self):
         '''
             Publish topics at standard frequency
         '''
-        self._io.analog_inputs[self._voltage_analog_input_number - 1] = self._current_battery_voltage
-        self._io.analog_inputs[self._current_analog_input_number - 1] = self._current_power_consumption
-        self._io.digital_inputs[self._contact_relay_digital_input_number - 1] = self._contact_relay_status
+        self._io.analog_inputs[self._voltage_analog_input_number -
+                               1] = self._current_battery_voltage
+        self._io.analog_inputs[self._current_analog_input_number -
+                               1] = self._current_power_consumption
+        self._io.digital_inputs[self._contact_relay_digital_input_number -
+                                1] = self._contact_relay_status
         self._io_publisher.publish(self._io)
         self._motor_status_publisher.publish(self._motor_status)
         self._voltage_publisher.publish(self._current_battery_voltage)
         self._emergency_stop_publisher.publish(self._emergency_stop)
 
-        return 0
+        if self._publish_battery_estimation == True:
+            battery_status = BatteryStatus()
+            battery_status.voltage = self._current_battery_voltage
+            battery_status.level = 100 * \
+                (self._current_battery_amperes / self._battery_amperes)
+            battery_status.current = self._current_power_consumption
+            if self._current_power_consumption < 0.0:
+                battery_status.is_charging = True
+            battery_status_stamped = BatteryStatusStamped()
+            battery_status_stamped.header.stamp = rospy.Time.now()
+            battery_status_stamped.status = battery_status
 
+            self._battery_status_publisher.publish(battery_status)
+            self._battery_status_stamped_publisher.publish(
+                battery_status_stamped)
+
+        return 0
 
     def initState(self):
         '''
@@ -378,12 +416,19 @@ class RobotnikBaseHwSim:
                 Actions performed in ready state
         '''
         if self._io.digital_outputs[self._charge_digital_output_number - 1] is True:  # charging
-            self._current_power_consumption = -1.0 * self._power_charge
             self._contact_relay_status = not self._inverted_contact_relay
         else:
-            self._current_power_consumption = self._power_consumption
             self._contact_relay_status = self._inverted_contact_relay
 
+        if self._contact_relay_status != self._last_contact_relay_status:
+            self._contact_relay_status_changed_time = rospy.Time.now()
+            self._last_contact_relay_status = self._contact_relay_status
+
+        # To simulate the battery charge when the contact relay is closed we need to wait a few seconds
+        if self._contact_relay_status == True and rospy.Time.now() - self._contact_relay_status_changed_time > self._time_to_start_charging:
+            self._current_power_consumption = -1.0 * self._power_charge
+        else:
+            self._current_power_consumption = self._power_consumption
 
         self.updateBattery()
 
@@ -419,7 +464,8 @@ class RobotnikBaseHwSim:
         if self.state != new_state:
             self.previous_state = self.state
             self.state = new_state
-            rospy.loginfo('%s::switchToState: %s' % (self.node_name, self.stateToString(self.state)))
+            rospy.loginfo('%s::switchToState: %s' %
+                          (self.node_name, self.stateToString(self.state)))
 
         return
 
@@ -467,7 +513,8 @@ class RobotnikBaseHwSim:
         self.msg_state.real_freq = self.real_freq
         self._state_publisher.publish(self.msg_state)
 
-        self.t_publish_state = threading.Timer(self.publish_state_timer, self.publishROSstate)
+        self.t_publish_state = threading.Timer(
+            self.publish_state_timer, self.publishROSstate)
         self.t_publish_state.start()
 
     def updateBattery(self):
@@ -477,7 +524,8 @@ class RobotnikBaseHwSim:
         elapsed_time = 1.0/self.real_freq
         # 3600 secs -> power consumption
         # elapsed_time -> x
-        battery_consumption = (self._current_power_consumption * elapsed_time) / 3600
+        battery_consumption = (
+            self._current_power_consumption * elapsed_time) / 3600
         self._current_battery_amperes -= battery_consumption
 
         if self._current_battery_amperes < 0.0:
@@ -485,7 +533,8 @@ class RobotnikBaseHwSim:
         elif self._current_battery_amperes > self._battery_amperes:
             self._current_battery_amperes = self._battery_amperes
 
-        current_battery_percentage = 100*(self._current_battery_amperes / self._battery_amperes)
+        current_battery_percentage = 100 * \
+            (self._current_battery_amperes / self._battery_amperes)
         current_battery_voltage_index = 0
 
         for i in range(len(self._battery_voltage)-1):
@@ -506,7 +555,8 @@ class RobotnikBaseHwSim:
                 @type req: robotnik_msgs/enable_disable
         '''
         # DEMO
-        rospy.loginfo('%s::toogleRobotOperationserviceCb: toogling robot to %s', self.node_name, str(req.value))
+        rospy.loginfo('%s::toogleRobotOperationserviceCb: toogling robot to %s',
+                      self.node_name, str(req.value))
 
         return True
 
@@ -517,11 +567,30 @@ class RobotnikBaseHwSim:
                 @type req: robotnik_msgs/set_digital_output
         '''
         if (req.output <= 0 or req.output > len(self._io.digital_outputs)):
-            rospy.loginfo('%s::setDigitalOutputServiceCb: output %d out of range', self.node_name, req.output)
+            rospy.loginfo(
+                '%s::setDigitalOutputServiceCb: output %d out of range', self.node_name, req.output)
             return False
 
-        rospy.loginfo('%s::setDigitalOutputServiceCb: setting output %d to %d', self.node_name, req.output, req.value)
+        rospy.loginfo('%s::setDigitalOutputServiceCb: setting output %d to %d',
+                      self.node_name, req.output, req.value)
         self._io.digital_outputs[req.output - 1] = req.value
+
+        return True
+
+    def setDigitalInputputServiceCb(self, req):
+        '''
+                ROS service server to set the hw digital inputs
+                @param req: Required action
+                @type req: robotnik_msgs/set_digital_output
+        '''
+        if (req.output <= 0 or req.output > len(self._io.digital_inputs)):
+            rospy.loginfo(
+                '%s::setDigitalInputputServiceCb: output %d out of range', self.node_name, req.output)
+            return False
+
+        rospy.loginfo('%s::setDigitalInputputServiceCb: setting inpu %d to %d',
+                      self.node_name, req.output, req.value)
+        self._io.digital_inputs[req.output - 1] = req.value
 
         return True
 
@@ -574,6 +643,8 @@ def main():
         'contact_relay_digital_input_number': 2,
         'inverted_contact_relay': True,
         'charge_digital_output_number': 1,
+        'publish_battery_estimation': True,
+        'publish_charge_manager': True
     }
 
     args = {}
