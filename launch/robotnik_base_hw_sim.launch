@@ -5,6 +5,7 @@
 	<arg name="robot_id" default="$(optenv ROBOT_ID robot)"/> 
 	<arg name="prefix" default="$(arg robot_id)_"/> 
 	<arg name="publish_battery_estimation" default="true"/> 
+	<arg name="charge_digital_output_number" default="$(optenv ROBOT_BATTERY_CHARGER_RELAY_OUTPUT_NUMBER 2)"/> 
 
 	<node pkg="robotnik_base_hw_sim" type="robotnik_base_hw_sim_node.py" name="robotnik_base_hw" output="screen">
 		<rosparam command="load" file="$(find robotnik_base_hw_sim)/config/$(arg config_yaml).yaml" subst_value="true"/>

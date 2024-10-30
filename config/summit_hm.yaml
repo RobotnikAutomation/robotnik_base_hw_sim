@@ -39,4 +39,4 @@ voltage_analog_input_number: 1
 current_analog_input_number: 2
 inverted_contact_relay: false
 contact_relay_digital_input_number: 2
-charge_digital_output_number: 1
+charge_digital_output_number: $(arg charge_digital_output_number)
