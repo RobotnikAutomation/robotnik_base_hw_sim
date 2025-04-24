@@ -1,0 +1,17 @@
+services:
+  robotnik_io_controller_sim:
+    container_name: robotnik_io_controller_sim
+    image: robotnik_io_controller_sim-robotnik_io_controller_sim:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        base_image: robotnik/ros
+        ros_distro: jazzy
+        image_base_version: 0.6.1
+        ros_mirror: ros.mirror.robotnik.ws
+    network_mode: host
+    privileged: true
+    environment:
+      ROS_DOMAIN_ID: 0
+      ROBOT: rbtheron

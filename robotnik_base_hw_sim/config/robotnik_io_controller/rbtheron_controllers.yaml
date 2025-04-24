@@ -1,0 +1,20 @@
+robotnik_io_controller:
+  ros__parameters:
+    wheel_names:
+    - left_wheel_joint
+    - right_wheel_joint
+    digital_inputs:
+    - 4
+    - 4
+    digital_outputs:
+    - 4
+    - 4
+    analog_inputs:
+    - 1
+    - 1
+    analog_outputs:
+    - 0
+    - 0
+    analog_inputs_multiplier:
+    - 14.64
+    - 1.0
